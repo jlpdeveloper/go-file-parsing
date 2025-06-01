@@ -17,19 +17,18 @@ type RowValidator interface {
 }
 
 type CsvRowValidator struct {
-	config  *config.Config
-	columns []string
+	config *config.Config
 }
 
 func (c CsvRowValidator) Validate(row string) error {
-	c.columns = strings.Split(row, c.config.Delimiter)
-	c.isValidSize()
+	cols := strings.Split(row, c.config.Delimiter)
+	c.isValidSize(&cols)
 	return nil
 }
 
-func (c CsvRowValidator) isValidSize() {
-	if len(c.columns) != c.config.ExpectedColumns {
-		println(fmt.Sprintf("Id:%s Invalid size", c.columns[0]))
+func (c CsvRowValidator) isValidSize(cols *[]string) {
+	if len(*cols) != c.config.ExpectedColumns {
+		println(fmt.Sprintf("Id:%s Invalid size", (*cols)[0]))
 	}
 }
 
