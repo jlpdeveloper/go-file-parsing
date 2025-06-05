@@ -23,7 +23,10 @@ func main() {
 
 func readWriteValkey(cacheClient cache.DistributedCache) {
 	ctx := context.Background()
-	cacheClient.Set(ctx, "Hello", "World")
+	err := cacheClient.Set(ctx, "Hello", "World")
+	if err != nil {
+		panic(err)
+	}
 	println("Write Done")
 	val, _ := cacheClient.Get(ctx, "Hello")
 
