@@ -17,7 +17,7 @@ type RowValidator interface {
 }
 
 type CsvRowValidator struct {
-	config *config.Config
+	config *config.ParserConfig
 }
 
 func (c CsvRowValidator) Validate(row string) error {
@@ -32,13 +32,13 @@ func (c CsvRowValidator) isValidSize(cols *[]string) {
 	}
 }
 
-func NewCsvRowValidator(conf *config.Config) CsvRowValidator {
+func NewCsvRowValidator(conf *config.ParserConfig) CsvRowValidator {
 	return CsvRowValidator{
 		config: conf,
 	}
 }
 
-func NewCsvRowValidatorPool(conf *config.Config, poolSize int) chan CsvRowValidator {
+func NewCsvRowValidatorPool(conf *config.ParserConfig, poolSize int) chan CsvRowValidator {
 	pool := make(chan CsvRowValidator, poolSize)
 	for i := 0; i < poolSize; i++ {
 		pool <- CsvRowValidator{

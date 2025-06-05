@@ -5,14 +5,14 @@ import (
 	"os"
 )
 
-type Config struct {
+type ParserConfig struct {
 	Delimiter       string
 	ExpectedColumns int
 	HasHeader       bool
 }
 
-func LoadConfig(filename string) (Config, error) {
-	var cfg Config
+func LoadParserConfig(filename string) (ParserConfig, error) {
+	var cfg ParserConfig
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return cfg, err
