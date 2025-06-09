@@ -35,7 +35,7 @@ func readWriteValkey(cacheClient cache.DistributedCache) {
 	//cacheClient.Do(ctx, cacheClient.B().Hincrby().Key("test").Field("total").Increment(10).Build())
 }
 
-func parseFile(filename string) {
+func parseFile(filename string, cacheClient cache.DistributedCache) {
 	file, _ := os.Open(filename)
 	defer func() {
 		fcErr := file.Close()
@@ -47,6 +47,7 @@ func parseFile(filename string) {
 	if err != nil {
 		panic(err)
 	}
+	pool, errorChan = validator.NewCsvRowValidatorPool(&conf, cacheClient, 100)
 
 	var rowCount int64 = 0
 	scanner := bufio.NewScanner(file)
