@@ -54,7 +54,7 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 		panic(err)
 	}
 	pool := validator.NewCsvRowValidatorPool(&conf, cacheClient, 100)
-	errChan := make(chan validator.RowError)
+	errChan := make(chan validator.RowError, 100)
 	var rowCount int64 = 0
 	scanner := bufio.NewScanner(file)
 	wg := &sync.WaitGroup{}
