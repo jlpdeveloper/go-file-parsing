@@ -7,6 +7,7 @@ import (
 	"go-file-parsing/cache"
 	"go-file-parsing/config"
 	"go-file-parsing/validator"
+	"log"
 	"os"
 	"sync"
 )
@@ -38,7 +39,10 @@ func readWriteValkey(cacheClient cache.DistributedCache) {
 }
 
 func parseFile(filename string, cacheClient cache.DistributedCache) {
-	file, _ := os.Open(filename)
+	file, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
 	defer func() {
 		fcErr := file.Close()
 		if fcErr != nil {
@@ -50,37 +54,46 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 		panic(err)
 	}
 	pool := validator.NewCsvRowValidatorPool(&conf, cacheClient, 100)
-	errChan := make(chan validator.RowError, 100)
+	errChan := make(chan validator.RowError)
 	var rowCount int64 = 0
 	scanner := bufio.NewScanner(file)
 	wg := &sync.WaitGroup{}
 	for scanner.Scan() {
-		if rowCount == 0 && conf.HasHeader {
+		currentRow := rowCount
+		if currentRow == 0 && conf.HasHeader {
 			rowCount++
 			continue
 		}
 		rowVal := <-pool
 		wg.Add(1)
-		go func(row string) {
+		go func(row string, rowNum int64) {
 			defer wg.Done()
 			rowErr := rowVal.Validate(row)
 			if rowErr != nil {
-				println(rowErr.Error())
+				log.Println(rowErr.Error())
 				errChan <- validator.RowError{
-					Row:   rowCount,
+					Row:   rowNum,
 					Error: rowErr,
 				}
 			}
 			pool <- rowVal
-		}(scanner.Text())
+		}(scanner.Text(), currentRow)
 		rowCount++
 	}
-
+	var errors []validator.RowError
+	errorWg := &sync.WaitGroup{}
+	errorWg.Add(1)
+	go func() {
+		defer errorWg.Done()
+		for err := range errChan {
+			errors = append(errors, err)
+		}
+	}()
 	wg.Wait()
-	println("CSV parsing complete.")
+	log.Println("CSV parsing complete.")
 	close(errChan)
-	for err := range errChan {
-		println(fmt.Sprintf("error on line: %d, error: %s", err.Row, err.Error.Error()))
+	for _, err := range errors {
+		log.Println(fmt.Sprintf("error on line: %d, error: %s", err.Row, err.Error.Error()))
 	}
 
 }
