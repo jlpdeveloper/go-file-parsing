@@ -13,7 +13,7 @@ type CsvRowValidator struct {
 	colValidators []ColValidator
 }
 
-func (c CsvRowValidator) Validate(row string) error {
+func (c *CsvRowValidator) Validate(row string) error {
 	cols := strings.Split(row, c.config.Delimiter)
 
 	vCtx := RowValidatorContext{
