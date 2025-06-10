@@ -92,6 +92,7 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 	wg.Wait()
 	log.Println("CSV parsing complete.")
 	close(errChan)
+	errorWg.Wait()
 	for _, err := range errors {
 		log.Println(fmt.Sprintf("error on line: %d, error: %s", err.Row, err.Error.Error()))
 	}

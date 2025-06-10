@@ -26,7 +26,7 @@ func (c *CsvRowValidator) Validate(row string) error {
 	for _, validator := range c.colValidators {
 		f := validator // capture
 		g.Go(func() error {
-			return f(&vCtx, &cols)
+			return f(&vCtx, cols)
 		})
 	}
 

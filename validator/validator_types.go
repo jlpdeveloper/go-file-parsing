@@ -9,7 +9,7 @@ type RowError struct {
 	Row   int64
 	Error error
 }
-type ColValidator func(*RowValidatorContext, *[]string) error
+type ColValidator func(*RowValidatorContext, []string) error
 
 type RowValidatorContext struct {
 	Config *config.ParserConfig

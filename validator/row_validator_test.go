@@ -10,10 +10,10 @@ import (
 )
 
 func TestValidate_StopsOnFirstError(t *testing.T) {
-	successValidator := func(_ *RowValidatorContext, _ *[]string) error {
+	successValidator := func(_ *RowValidatorContext, _ []string) error {
 		return nil
 	}
-	errorValidator := func(_ *RowValidatorContext, _ *[]string) error {
+	errorValidator := func(_ *RowValidatorContext, _ []string) error {
 		return fmt.Errorf("bad column")
 	}
 	v := CsvRowValidator{
@@ -33,7 +33,7 @@ func TestValidate_StopsOnFirstError(t *testing.T) {
 }
 
 func TestValidate_SuccessfulValidation(t *testing.T) {
-	successValidator := func(_ *RowValidatorContext, _ *[]string) error {
+	successValidator := func(_ *RowValidatorContext, _ []string) error {
 		return nil
 	}
 	v := CsvRowValidator{
@@ -61,7 +61,7 @@ func TestValidate_ConcurrentValidation(t *testing.T) {
 	validators := make([]ColValidator, 3)
 	for i := 0; i < 3; i++ {
 		idx := i // Capture loop variable
-		validators[i] = func(_ *RowValidatorContext, _ *[]string) error {
+		validators[i] = func(_ *RowValidatorContext, _ []string) error {
 			defer wg.Done()
 			validatorCalled[idx] = true
 			// Add a small delay to ensure concurrency
@@ -95,13 +95,13 @@ func TestValidate_ConcurrentValidation(t *testing.T) {
 
 func TestValidate_EmptyRow(t *testing.T) {
 	called := false
-	validator := func(_ *RowValidatorContext, cols *[]string) error {
+	validator := func(_ *RowValidatorContext, cols []string) error {
 		called = true
-		if len(*cols) != 1 {
-			t.Errorf("expected 1 empty column, got %d", len(*cols))
+		if len(cols) != 1 {
+			t.Errorf("expected 1 empty column, got %d", len(cols))
 		}
-		if (*cols)[0] != "" {
-			t.Errorf("expected empty string, got %s", (*cols)[0])
+		if (cols)[0] != "" {
+			t.Errorf("expected empty string, got %s", (cols)[0])
 		}
 		return nil
 	}
@@ -124,9 +124,9 @@ func TestValidate_EmptyRow(t *testing.T) {
 }
 
 func TestValidate_DifferentDelimiter(t *testing.T) {
-	validator := func(_ *RowValidatorContext, cols *[]string) error {
-		if len(*cols) != 3 {
-			return fmt.Errorf("expected 3 columns, got %d", len(*cols))
+	validator := func(_ *RowValidatorContext, cols []string) error {
+		if len(cols) != 3 {
+			return fmt.Errorf("expected 3 columns, got %d", len(cols))
 		}
 		return nil
 	}
@@ -266,7 +266,7 @@ func TestValidate_CacheInteraction(t *testing.T) {
 	mockCache := &MockCacheWithTracking{}
 
 	// Create a validator that uses the cache
-	cacheValidator := func(ctx *RowValidatorContext, cols *[]string) error {
+	cacheValidator := func(ctx *RowValidatorContext, cols []string) error {
 		// Get something from cache
 		_, err := ctx.Cache.Get(context.Background(), "test-key")
 		if err != nil {
@@ -274,8 +274,8 @@ func TestValidate_CacheInteraction(t *testing.T) {
 		}
 
 		// Set something in cache
-		if len(*cols) > 0 {
-			return ctx.Cache.Set(context.Background(), "result-key", (*cols)[0])
+		if len(cols) > 0 {
+			return ctx.Cache.Set(context.Background(), "result-key", (cols)[0])
 		}
 
 		return nil
@@ -317,29 +317,29 @@ func TestValidate_MultipleValidators(t *testing.T) {
 
 	validators := []ColValidator{
 		// Check first column is not empty
-		func(_ *RowValidatorContext, cols *[]string) error {
-			if len(*cols) == 0 || (*cols)[0] == "" {
+		func(_ *RowValidatorContext, cols []string) error {
+			if len(cols) == 0 || (cols)[0] == "" {
 				return fmt.Errorf("first column is empty")
 			}
 			validationResults[0] = true
 			return nil
 		},
 		// Check second column is a number
-		func(_ *RowValidatorContext, cols *[]string) error {
-			if len(*cols) < 2 || !isNumeric((*cols)[1]) {
+		func(_ *RowValidatorContext, cols []string) error {
+			if len(cols) < 2 || !isNumeric((cols)[1]) {
 				return fmt.Errorf("second column is not a number")
 			}
 			validationResults[1] = true
 			return nil
 		},
 		// Check third column is one of allowed values
-		func(_ *RowValidatorContext, cols *[]string) error {
-			if len(*cols) < 3 {
+		func(_ *RowValidatorContext, cols []string) error {
+			if len(cols) < 3 {
 				return fmt.Errorf("missing third column")
 			}
 
 			allowedValues := []string{"A", "B", "C"}
-			value := (*cols)[2]
+			value := (cols)[2]
 
 			for _, allowed := range allowedValues {
 				if value == allowed {
