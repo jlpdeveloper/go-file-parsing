@@ -9,11 +9,10 @@ type RowError struct {
 	Row   int64
 	Error error
 }
-type ColValidator func(*RowValidatorContext, []string) error
+type ColValidator func(*RowValidatorContext, []string) (map[string]string, error)
 
 type RowValidatorContext struct {
 	Config *config.ParserConfig
-	Cache  cache.DistributedCache
 }
 
 type RowValidator interface {
