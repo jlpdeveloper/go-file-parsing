@@ -128,17 +128,17 @@ func TestHasValidInterestRate(t *testing.T) {
 	}{
 		{
 			name:    "valid interest rate",
-			cols:    []string{"id", "name", "1000", "500", "500", "term", "0.1"},
+			cols:    []string{"id", "name", "1000", "500", "500", "term", "10"},
 			wantErr: false,
 		},
 		{
 			name:    "valid interest rate at minimum",
-			cols:    []string{"id", "name", "1000", "500", "500", "term", "0.05"},
+			cols:    []string{"id", "name", "1000", "500", "500", "term", "05"},
 			wantErr: false,
 		},
 		{
 			name:    "valid interest rate at maximum",
-			cols:    []string{"id", "name", "1000", "500", "500", "term", "0.35"},
+			cols:    []string{"id", "name", "1000", "500", "500", "term", "35"},
 			wantErr: false,
 		},
 		{
@@ -149,15 +149,15 @@ func TestHasValidInterestRate(t *testing.T) {
 		},
 		{
 			name:    "interest rate below minimum",
-			cols:    []string{"id", "name", "1000", "500", "500", "term", "0.04"},
+			cols:    []string{"id", "name", "1000", "500", "500", "term", "04"},
 			wantErr: true,
-			errMsg:  "interest rate is not between 0.05 and 0.35",
+			errMsg:  "interest rate is not between 5% and 35%",
 		},
 		{
 			name:    "interest rate above maximum",
-			cols:    []string{"id", "name", "1000", "500", "500", "term", "0.36"},
+			cols:    []string{"id", "name", "1000", "500", "500", "term", "36"},
 			wantErr: true,
-			errMsg:  "interest rate is not between 0.05 and 0.35",
+			errMsg:  "interest rate is not between 5% and 35%",
 		},
 	}
 

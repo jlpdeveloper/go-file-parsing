@@ -42,8 +42,8 @@ func hasValidInterestRate(_ *RowValidatorContext, cols []string) (map[string]str
 	if err != nil {
 		return nil, errors.New("interest rate is not a number")
 	}
-	if rate < 0.05 || rate > 0.35 {
-		return nil, errors.New("interest rate is not between 0.05 and 0.35")
+	if rate < 5 || rate > 35 {
+		return nil, errors.New("interest rate is not between 5% and 35%")
 	}
 	return map[string]string{
 		"interestRate": cols[6],
