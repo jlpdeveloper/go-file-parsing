@@ -22,6 +22,10 @@ func (p *ParserValkeyCache) SetField(ctx context.Context, key, field, value stri
 	return p.valkeyCache.Do(ctx, p.valkeyCache.B().Hsetnx().Key(key).Field(field).Value(value).Build()).Error()
 }
 
+func (p *ParserValkeyCache) Delete(ctx context.Context, key string) error {
+	return p.valkeyCache.Do(ctx, p.valkeyCache.B().Del().Key(key).Build()).Error()
+}
+
 func (p *ParserValkeyCache) Close() {
 	p.valkeyCache.Close()
 }
