@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go-file-parsing/config"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -17,7 +18,7 @@ func TestValidate_StopsOnFirstError(t *testing.T) {
 		return nil, fmt.Errorf("bad column")
 	}
 	v := CsvRowValidator{
-		config:      &config.ParserConfig{},
+		config:      &config.ParserConfig{Delimiter: ","},
 		cacheClient: &MockCache{},
 		// Config as needed
 		colValidators: []ColValidator{
@@ -26,9 +27,14 @@ func TestValidate_StopsOnFirstError(t *testing.T) {
 			successValidator, // should NOT be called thanks to early exit
 		},
 	}
-	_, err := v.Validate("irrelevant,row,data")
+	id, err := v.Validate("irrelevant,row,data")
 	if err == nil || err.Error() != "bad column" {
 		t.Errorf("expected error from errorValidator; got %v", err)
+	}
+
+	// Even with an error, the ID (first column) should be returned
+	if id != "irrelevant" {
+		t.Errorf("expected ID to be 'irrelevant', got %s", id)
 	}
 }
 
@@ -37,7 +43,7 @@ func TestValidate_SuccessfulValidation(t *testing.T) {
 		return nil, nil
 	}
 	v := CsvRowValidator{
-		config:      &config.ParserConfig{},
+		config:      &config.ParserConfig{Delimiter: ","},
 		cacheClient: &MockCache{},
 		colValidators: []ColValidator{
 			successValidator,
@@ -45,9 +51,14 @@ func TestValidate_SuccessfulValidation(t *testing.T) {
 			successValidator,
 		},
 	}
-	_, err := v.Validate("valid,row,data")
+	id, err := v.Validate("valid,row,data")
 	if err != nil {
 		t.Errorf("expected no error, got: %v", err)
+	}
+
+	// Check that the ID (first column) is correctly returned
+	if id != "valid" {
+		t.Errorf("expected ID to be 'valid', got %s", id)
 	}
 }
 
@@ -71,18 +82,23 @@ func TestValidate_ConcurrentValidation(t *testing.T) {
 	}
 
 	v := CsvRowValidator{
-		config:        &config.ParserConfig{},
+		config:        &config.ParserConfig{Delimiter: ","},
 		cacheClient:   &MockCache{},
 		colValidators: validators,
 	}
 
-	_, err := v.Validate("test,row,data")
+	id, err := v.Validate("test,row,data")
 
 	// Wait for all validators to complete
 	wg.Wait()
 
 	if err != nil {
 		t.Errorf("expected no error, got: %v", err)
+	}
+
+	// Check that the ID (first column) is correctly returned
+	if id != "test" {
+		t.Errorf("expected ID to be 'test', got %s", id)
 	}
 
 	// Verify all validators were called
@@ -112,7 +128,7 @@ func TestValidate_EmptyRow(t *testing.T) {
 		colValidators: []ColValidator{validator},
 	}
 
-	_, err := v.Validate("")
+	id, err := v.Validate("")
 
 	if err != nil {
 		t.Errorf("expected no error, got: %v", err)
@@ -120,6 +136,12 @@ func TestValidate_EmptyRow(t *testing.T) {
 
 	if !called {
 		t.Error("validator was not called")
+	}
+
+	// Check that the ID (first column) is correctly returned
+	// For an empty row, the ID should be an empty string
+	if id != "" {
+		t.Errorf("expected ID to be empty string, got %s", id)
 	}
 }
 
@@ -177,10 +199,24 @@ func TestValidate_DifferentDelimiter(t *testing.T) {
 				colValidators: []ColValidator{validator},
 			}
 
-			_, err := v.Validate(tc.row)
+			id, err := v.Validate(tc.row)
 
 			if (err != nil) != tc.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tc.wantErr)
+			}
+
+			// Check that the ID (first column) is correctly returned
+			expectedID := ""
+			if len(tc.row) > 0 {
+				// Extract the first value based on the delimiter
+				parts := strings.Split(tc.row, tc.delimiter)
+				if len(parts) > 0 {
+					expectedID = parts[0]
+				}
+			}
+
+			if id != expectedID {
+				t.Errorf("expected ID to be '%s', got '%s'", expectedID, id)
 			}
 		})
 	}
@@ -224,10 +260,23 @@ func TestValidate_ColumnCountValidation(t *testing.T) {
 				colValidators: []ColValidator{isValidSize},
 			}
 
-			_, err := v.Validate(tc.row)
+			id, err := v.Validate(tc.row)
 
 			if (err != nil) != tc.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tc.wantErr)
+			}
+
+			// Check that the ID (first column) is correctly returned
+			expectedID := ""
+			if len(tc.row) > 0 {
+				parts := strings.Split(tc.row, ",")
+				if len(parts) > 0 {
+					expectedID = parts[0]
+				}
+			}
+
+			if id != expectedID {
+				t.Errorf("expected ID to be '%s', got '%s'", expectedID, id)
 			}
 		})
 	}
@@ -342,7 +391,7 @@ func TestValidate_MultipleValidators(t *testing.T) {
 				colValidators: validators,
 			}
 
-			_, err := v.Validate(tc.row)
+			id, err := v.Validate(tc.row)
 
 			if (err != nil) != tc.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tc.wantErr)
@@ -354,6 +403,19 @@ func TestValidate_MultipleValidators(t *testing.T) {
 					if !result {
 						t.Errorf("validator %d did not pass", i)
 					}
+				}
+
+				// Check that the ID (first column) is correctly returned
+				expectedID := ""
+				if len(tc.row) > 0 {
+					parts := strings.Split(tc.row, ",")
+					if len(parts) > 0 {
+						expectedID = parts[0]
+					}
+				}
+
+				if id != expectedID {
+					t.Errorf("expected ID to be '%s', got '%s'", expectedID, id)
 				}
 			}
 		})
