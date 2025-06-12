@@ -14,22 +14,23 @@ type CsvRowValidator struct {
 	colValidators []ColValidator
 }
 
-func (c *CsvRowValidator) Validate(row string) error {
+func (c *CsvRowValidator) Validate(row string) (string, error) {
 	//First we create a channel to write to the cache
 	ctx := context.Background()
 	//Create a channel for writing to the cache. Defer closing it
 	cacheChan := make(chan map[string]string, 100)
 	defer close(cacheChan)
+	//Split the columns, then set the first value to the raw data string (for debug purposes)
+	cols := strings.Split(row, c.config.Delimiter)
 	//Spin off a new goroutine that will write to the cache as it processes from the channel
 	go func() {
 		for data := range cacheChan {
 			for key, value := range data {
-				_ = c.cacheClient.SetField(ctx, key, value, row)
+				_ = c.cacheClient.SetField(ctx, cols[0], key, value)
 			}
 		}
 	}()
-	//Split the columns, then set the first value to the raw data string (for debug purposes)
-	cols := strings.Split(row, c.config.Delimiter)
+
 	_ = c.cacheClient.SetField(ctx, cols[0], "raw", row)
 	_ = c.cacheClient.SetField(ctx, cols[0], "id", cols[0])
 
@@ -52,5 +53,5 @@ func (c *CsvRowValidator) Validate(row string) error {
 		})
 	}
 
-	return g.Wait() // returns first error (if any), cancels other goroutines
+	return cols[0], g.Wait() // returns first error (if any), cancels other goroutines
 }

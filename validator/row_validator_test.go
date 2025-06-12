@@ -26,7 +26,7 @@ func TestValidate_StopsOnFirstError(t *testing.T) {
 			successValidator, // should NOT be called thanks to early exit
 		},
 	}
-	err := v.Validate("irrelevant,row,data")
+	_, err := v.Validate("irrelevant,row,data")
 	if err == nil || err.Error() != "bad column" {
 		t.Errorf("expected error from errorValidator; got %v", err)
 	}
@@ -45,7 +45,7 @@ func TestValidate_SuccessfulValidation(t *testing.T) {
 			successValidator,
 		},
 	}
-	err := v.Validate("valid,row,data")
+	_, err := v.Validate("valid,row,data")
 	if err != nil {
 		t.Errorf("expected no error, got: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestValidate_ConcurrentValidation(t *testing.T) {
 		colValidators: validators,
 	}
 
-	err := v.Validate("test,row,data")
+	_, err := v.Validate("test,row,data")
 
 	// Wait for all validators to complete
 	wg.Wait()
@@ -112,7 +112,7 @@ func TestValidate_EmptyRow(t *testing.T) {
 		colValidators: []ColValidator{validator},
 	}
 
-	err := v.Validate("")
+	_, err := v.Validate("")
 
 	if err != nil {
 		t.Errorf("expected no error, got: %v", err)
@@ -177,7 +177,7 @@ func TestValidate_DifferentDelimiter(t *testing.T) {
 				colValidators: []ColValidator{validator},
 			}
 
-			err := v.Validate(tc.row)
+			_, err := v.Validate(tc.row)
 
 			if (err != nil) != tc.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tc.wantErr)
@@ -224,7 +224,7 @@ func TestValidate_ColumnCountValidation(t *testing.T) {
 				colValidators: []ColValidator{isValidSize},
 			}
 
-			err := v.Validate(tc.row)
+			_, err := v.Validate(tc.row)
 
 			if (err != nil) != tc.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tc.wantErr)
@@ -342,7 +342,7 @@ func TestValidate_MultipleValidators(t *testing.T) {
 				colValidators: validators,
 			}
 
-			err := v.Validate(tc.row)
+			_, err := v.Validate(tc.row)
 
 			if (err != nil) != tc.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tc.wantErr)

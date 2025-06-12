@@ -19,7 +19,7 @@ func main() {
 	}
 	defer cacheClient.Close()
 
-	readWriteValkey(cacheClient)
+	//readWriteValkey(cacheClient)
 	parseFile("sample.csv", cacheClient)
 
 }
@@ -68,11 +68,12 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 		wg.Add(1)
 		go func(row string, rowNum int64) {
 			defer wg.Done()
-			rowErr := rowVal.Validate(row)
+			id, rowErr := rowVal.Validate(row)
 			if rowErr != nil {
 				log.Println(rowErr.Error())
 				errChan <- validator.RowError{
 					Row:   rowNum,
+					Id:    id,
 					Error: rowErr,
 				}
 			}
@@ -94,6 +95,8 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 	close(errChan)
 	errorWg.Wait()
 	for _, err := range errors {
+		//Cleanup all the bad data
+		_ = cacheClient.Delete(context.Background(), err.Id)
 		log.Println(fmt.Sprintf("error on line: %d, error: %s", err.Row, err.Error.Error()))
 	}
 
