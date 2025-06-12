@@ -33,4 +33,6 @@ func NewCsvRowValidatorPool(conf *config.ParserConfig, cache cache.DistributedCa
 
 var validators = []ColValidator{
 	isValidSize,
+	hasValidLoanAmount,
+	hasValidInterestRate,
 }

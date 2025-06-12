@@ -118,3 +118,79 @@ func TestHasValidLoanAmount(t *testing.T) {
 		})
 	}
 }
+
+func TestHasValidInterestRate(t *testing.T) {
+	testCases := []struct {
+		name    string
+		cols    []string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "valid interest rate",
+			cols:    []string{"id", "name", "1000", "500", "500", "term", "0.1"},
+			wantErr: false,
+		},
+		{
+			name:    "valid interest rate at minimum",
+			cols:    []string{"id", "name", "1000", "500", "500", "term", "0.05"},
+			wantErr: false,
+		},
+		{
+			name:    "valid interest rate at maximum",
+			cols:    []string{"id", "name", "1000", "500", "500", "term", "0.35"},
+			wantErr: false,
+		},
+		{
+			name:    "non-numeric interest rate",
+			cols:    []string{"id", "name", "1000", "500", "500", "term", "abc"},
+			wantErr: true,
+			errMsg:  "interest rate is not a number",
+		},
+		{
+			name:    "interest rate below minimum",
+			cols:    []string{"id", "name", "1000", "500", "500", "term", "0.04"},
+			wantErr: true,
+			errMsg:  "interest rate is not between 0.05 and 0.35",
+		},
+		{
+			name:    "interest rate above maximum",
+			cols:    []string{"id", "name", "1000", "500", "500", "term", "0.36"},
+			wantErr: true,
+			errMsg:  "interest rate is not between 0.05 and 0.35",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := &RowValidatorContext{
+				Config: &config.ParserConfig{},
+			}
+
+			result, err := hasValidInterestRate(ctx, tc.cols)
+
+			// Check if error was expected
+			if tc.wantErr {
+				if err == nil {
+					t.Errorf("expected error but got nil")
+					return
+				}
+				if err.Error() != tc.errMsg {
+					t.Errorf("expected error message '%s', got '%s'", tc.errMsg, err.Error())
+				}
+				return
+			}
+
+			// If no error was expected, check the result
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			// Verify the returned map contains the expected values
+			if result["interestRate"] != tc.cols[6] {
+				t.Errorf("expected interestRate '%s', got '%s'", tc.cols[6], result["interestRate"])
+			}
+		})
+	}
+}
