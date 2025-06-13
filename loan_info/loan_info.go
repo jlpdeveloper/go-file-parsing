@@ -10,6 +10,8 @@ var validators = []validator.ColValidator{
 	isValidSize,
 	hasValidLoanAmount,
 	hasValidInterestRate,
+	hasValidGradeSubgrade,
+	hasValidTerm,
 }
 
 func NewRowValidatorPool(conf *config.ParserConfig, cache cache.DistributedCache, poolSize int) chan validator.CsvRowValidator {

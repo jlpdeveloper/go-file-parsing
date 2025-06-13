@@ -314,3 +314,112 @@ func TestHasValidTerm(t *testing.T) {
 		})
 	}
 }
+
+func TestHasValidGradeSubgrade(t *testing.T) {
+	testCases := []struct {
+		name    string
+		cols    []string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "valid grade A and subgrade A1",
+			cols:    []string{"id", "name", "1000", "500", "500", "36", "10.0", "250.0", "A", "A1"},
+			wantErr: false,
+		},
+		{
+			name:    "valid grade B and subgrade B3",
+			cols:    []string{"id", "name", "1000", "500", "500", "36", "10.0", "250.0", "B", "B3"},
+			wantErr: false,
+		},
+		{
+			name:    "valid grade G and subgrade G5",
+			cols:    []string{"id", "name", "1000", "500", "500", "36", "10.0", "250.0", "G", "G5"},
+			wantErr: false,
+		},
+		{
+			name:    "invalid grade H",
+			cols:    []string{"id", "name", "1000", "500", "500", "36", "10.0", "250.0", "H", "H1"},
+			wantErr: true,
+			errMsg:  "grade must be a single letter from A to G",
+		},
+		{
+			name:    "invalid grade lowercase a",
+			cols:    []string{"id", "name", "1000", "500", "500", "36", "10.0", "250.0", "a", "a1"},
+			wantErr: true,
+			errMsg:  "grade must be a single letter from A to G",
+		},
+		{
+			name:    "invalid grade multiple letters",
+			cols:    []string{"id", "name", "1000", "500", "500", "36", "10.0", "250.0", "AA", "AA1"},
+			wantErr: true,
+			errMsg:  "grade must be a single letter from A to G",
+		},
+		{
+			name:    "invalid grade empty",
+			cols:    []string{"id", "name", "1000", "500", "500", "36", "10.0", "250.0", "", "A1"},
+			wantErr: true,
+			errMsg:  "grade must be a single letter from A to G",
+		},
+		{
+			name:    "invalid subgrade wrong letter",
+			cols:    []string{"id", "name", "1000", "500", "500", "36", "10.0", "250.0", "A", "B1"},
+			wantErr: true,
+			errMsg:  "subgrade must be the grade letter followed by a number from 1 to 5",
+		},
+		{
+			name:    "invalid subgrade wrong number",
+			cols:    []string{"id", "name", "1000", "500", "500", "36", "10.0", "250.0", "A", "A6"},
+			wantErr: true,
+			errMsg:  "subgrade must be the grade letter followed by a number from 1 to 5",
+		},
+		{
+			name:    "invalid subgrade wrong format",
+			cols:    []string{"id", "name", "1000", "500", "500", "36", "10.0", "250.0", "A", "A"},
+			wantErr: true,
+			errMsg:  "subgrade must be the grade letter followed by a number from 1 to 5",
+		},
+		{
+			name:    "invalid subgrade empty",
+			cols:    []string{"id", "name", "1000", "500", "500", "36", "10.0", "250.0", "A", ""},
+			wantErr: true,
+			errMsg:  "subgrade must be the grade letter followed by a number from 1 to 5",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := &validator.RowValidatorContext{
+				Config: &config.ParserConfig{},
+			}
+
+			result, err := hasValidGradeSubgrade(ctx, tc.cols)
+
+			// Check if error was expected
+			if tc.wantErr {
+				if err == nil {
+					t.Errorf("expected error but got nil")
+					return
+				}
+				if err.Error() != tc.errMsg {
+					t.Errorf("expected error message '%s', got '%s'", tc.errMsg, err.Error())
+				}
+				return
+			}
+
+			// If no error was expected, check the result
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			// Verify the returned map contains the expected values
+			if result["grade"] != tc.cols[8] {
+				t.Errorf("expected grade '%s', got '%s'", tc.cols[8], result["grade"])
+			}
+			if result["subgrade"] != tc.cols[9] {
+				t.Errorf("expected subgrade '%s', got '%s'", tc.cols[9], result["subgrade"])
+			}
+		})
+	}
+}

@@ -3,6 +3,7 @@ package loan_info
 import (
 	"errors"
 	"go-file-parsing/validator"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -78,5 +79,29 @@ func hasValidTerm(_ *validator.RowValidatorContext, cols []string) (map[string]s
 	}
 	return map[string]string{
 		"term": strconv.Itoa(term),
+	}, nil
+}
+
+func hasValidGradeSubgrade(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+	// Grade is in column 8 (index 8, 0-based)
+	grade := strings.TrimSpace(cols[8])
+
+	// Subgrade is in column 9 (index 9, 0-based)
+	subgrade := strings.TrimSpace(cols[9])
+
+	// Check if grade is a single letter from A to G
+	if !regexp.MustCompile(`^[A-G]$`).MatchString(grade) {
+		return nil, errors.New("grade must be a single letter from A to G")
+	}
+
+	// Check if subgrade matches the pattern of grade letter followed by a number from 1 to 5
+	expectedPattern := "^" + grade + "[1-5]$"
+	if !regexp.MustCompile(expectedPattern).MatchString(subgrade) {
+		return nil, errors.New("subgrade must be the grade letter followed by a number from 1 to 5")
+	}
+
+	return map[string]string{
+		"grade":    grade,
+		"subgrade": subgrade,
 	}, nil
 }
