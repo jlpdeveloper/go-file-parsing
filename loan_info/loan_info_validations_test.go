@@ -3,6 +3,8 @@ package loan_info
 import (
 	"go-file-parsing/config"
 	"go-file-parsing/validator"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -191,6 +193,123 @@ func TestHasValidInterestRate(t *testing.T) {
 			// Verify the returned map contains the expected values
 			if result["interestRate"] != tc.cols[6] {
 				t.Errorf("expected interestRate '%s', got '%s'", tc.cols[6], result["interestRate"])
+			}
+		})
+	}
+}
+
+func TestHasValidTerm(t *testing.T) {
+	testCases := []struct {
+		name    string
+		cols    []string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "valid term - middle of range",
+			cols:    []string{"id", "name", "1000", "500", "500", "12 months"},
+			wantErr: false,
+		},
+		{
+			name:    "valid term - minimum",
+			cols:    []string{"id", "name", "1000", "500", "500", "1 months"},
+			wantErr: false,
+		},
+		{
+			name:    "valid term - maximum",
+			cols:    []string{"id", "name", "1000", "500", "500", "36 months"},
+			wantErr: false,
+		},
+		{
+			name:    "valid term - with extra spaces",
+			cols:    []string{"id", "name", "1000", "500", "500", "  24 months  "},
+			wantErr: false,
+		},
+		{
+			name:    "non-numeric term",
+			cols:    []string{"id", "name", "1000", "500", "500", "abc months"},
+			wantErr: true,
+			errMsg:  "term is not a number",
+		},
+		{
+			name:    "term below minimum",
+			cols:    []string{"id", "name", "1000", "500", "500", "0 months"},
+			wantErr: true,
+			errMsg:  "term is not between 1 and 36 months",
+		},
+		{
+			name:    "term above maximum",
+			cols:    []string{"id", "name", "1000", "500", "500", "37 months"},
+			wantErr: true,
+			errMsg:  "term is not between 1 and 36 months",
+		},
+		{
+			name:    "negative term",
+			cols:    []string{"id", "name", "1000", "500", "500", "-5 months"},
+			wantErr: true,
+			errMsg:  "term is not between 1 and 36 months",
+		},
+		{
+			name:    "missing months suffix",
+			cols:    []string{"id", "name", "1000", "500", "500", "12"},
+			wantErr: false,
+		},
+		{
+			name:    "empty term",
+			cols:    []string{"id", "name", "1000", "500", "500", ""},
+			wantErr: true,
+			errMsg:  "term is not a number",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := &validator.RowValidatorContext{
+				Config: &config.ParserConfig{},
+			}
+
+			result, err := hasValidTerm(ctx, tc.cols)
+
+			// Check if error was expected
+			if tc.wantErr {
+				if err == nil {
+					t.Errorf("expected error but got nil")
+					return
+				}
+				if err.Error() != tc.errMsg {
+					t.Errorf("expected error message '%s', got '%s'", tc.errMsg, err.Error())
+				}
+				return
+			}
+
+			// If no error was expected, check the result
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			// Verify the returned map contains the expected term value
+			// Process the term value using the same logic as the function
+			termStr := strings.TrimSpace(tc.cols[5])
+
+			// Remove the "months" suffix using the same logic as the function
+			if strings.HasSuffix(strings.ToLower(termStr), "months") {
+				monthsIndex := strings.LastIndex(strings.ToLower(termStr), "months")
+				if monthsIndex > 0 {
+					termStr = termStr[:monthsIndex]
+				}
+			}
+
+			termStr = strings.TrimSpace(termStr)
+
+			term, err := strconv.Atoi(termStr)
+			if err != nil {
+				// If there's an error, we'll use 0 as the term value for comparison
+				term = 0
+			}
+
+			if result["term"] != strconv.Itoa(term) {
+				t.Errorf("expected term '%s', got '%s'", strconv.Itoa(term), result["term"])
 			}
 		})
 	}

@@ -53,8 +53,21 @@ func hasValidInterestRate(_ *validator.RowValidatorContext, cols []string) (map[
 }
 
 func hasValidTerm(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
-	termStr := strings.TrimSuffix(cols[5], " months")
-	termStr = strings.TrimSpace(termStr) // remove potential leading/trailing spaces
+	// First trim spaces from the original string
+	termStr := strings.TrimSpace(cols[5])
+
+	// Remove the " months" suffix, handling case where there might be spaces
+	// Use strings.HasSuffix to check if the string ends with " months"
+	if strings.HasSuffix(strings.ToLower(termStr), "months") {
+		// Find the last occurrence of "months" and take everything before it
+		monthsIndex := strings.LastIndex(strings.ToLower(termStr), "months")
+		if monthsIndex > 0 {
+			termStr = termStr[:monthsIndex]
+		}
+	}
+
+	// Trim spaces again
+	termStr = strings.TrimSpace(termStr)
 	term, err := strconv.Atoi(termStr)
 
 	if err != nil {
