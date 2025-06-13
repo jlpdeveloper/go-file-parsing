@@ -20,20 +20,10 @@ type RowValidator interface {
 	Validate(row string) (string, error)
 }
 
-func NewCsvRowValidatorPool(conf *config.ParserConfig, cache cache.DistributedCache, poolSize int) chan CsvRowValidator {
-	pool := make(chan CsvRowValidator, poolSize)
-	for i := 0; i < poolSize; i++ {
-		pool <- CsvRowValidator{
-			config:        conf,
-			cacheClient:   cache,
-			colValidators: validators,
-		}
+func New(conf *config.ParserConfig, cache cache.DistributedCache, colValidators []ColValidator) CsvRowValidator {
+	return CsvRowValidator{
+		config:        conf,
+		cacheClient:   cache,
+		colValidators: colValidators,
 	}
-	return pool
-}
-
-var validators = []ColValidator{
-	isValidSize,
-	hasValidLoanAmount,
-	hasValidInterestRate,
 }

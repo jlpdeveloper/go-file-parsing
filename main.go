@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go-file-parsing/cache"
 	"go-file-parsing/config"
+	"go-file-parsing/loan_info"
 	"go-file-parsing/validator"
 	"log"
 	"os"
@@ -53,7 +54,7 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 	if err != nil {
 		panic(err)
 	}
-	pool := validator.NewCsvRowValidatorPool(&conf, cacheClient, 100)
+	pool := loan_info.NewRowValidatorPool(&conf, cacheClient, 100)
 	errChan := make(chan validator.RowError, 100)
 	var rowCount int64 = 0
 	scanner := bufio.NewScanner(file)

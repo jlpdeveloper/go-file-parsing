@@ -1,11 +1,12 @@
-package validator
+package loan_info
 
 import (
 	"errors"
+	"go-file-parsing/validator"
 	"strconv"
 )
 
-func hasValidLoanAmount(_ *RowValidatorContext, cols []string) (map[string]string, error) {
+func hasValidLoanAmount(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	loanAmount, err := strconv.Atoi(cols[2])
 	if err != nil {
 		return nil, errors.New("loan amount is not a number")
@@ -37,7 +38,7 @@ func hasValidLoanAmount(_ *RowValidatorContext, cols []string) (map[string]strin
 	}, nil
 }
 
-func hasValidInterestRate(_ *RowValidatorContext, cols []string) (map[string]string, error) {
+func hasValidInterestRate(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	rate, err := strconv.ParseFloat(cols[6], 64)
 	if err != nil {
 		return nil, errors.New("interest rate is not a number")

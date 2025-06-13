@@ -1,7 +1,8 @@
-package validator
+package loan_info
 
 import (
 	"go-file-parsing/config"
+	"go-file-parsing/validator"
 	"testing"
 )
 
@@ -81,7 +82,7 @@ func TestHasValidLoanAmount(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := &RowValidatorContext{
+			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
 			}
 
@@ -163,7 +164,7 @@ func TestHasValidInterestRate(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := &RowValidatorContext{
+			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
 			}
 
