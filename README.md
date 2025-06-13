@@ -206,3 +206,11 @@ using ChatGPT to analyze the columns and give recommendations on rules to add co
 
 12. **Verified with Income**
     - `verification_status` in [Source Verified, Verified] and `annual_inc` > 30,000.
+
+
+## Additional Data to Store
+- `avg_cur_bal`
+- `application_type`
+  - `annual_inc_joint` if type: `Joint App`
+- `tot_coll_amt`
+- `acc_now_delinq`
