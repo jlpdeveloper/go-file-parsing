@@ -212,12 +212,12 @@ func TestHasValidTerm(t *testing.T) {
 		},
 		{
 			name:    "valid term - minimum",
-			cols:    []string{"id", "name", "1000", "500", "500", "1 months"},
+			cols:    []string{"id", "name", "1000", "500", "500", "12 months"},
 			wantErr: false,
 		},
 		{
 			name:    "valid term - maximum",
-			cols:    []string{"id", "name", "1000", "500", "500", "36 months"},
+			cols:    []string{"id", "name", "1000", "500", "500", "72 months"},
 			wantErr: false,
 		},
 		{
@@ -233,21 +233,21 @@ func TestHasValidTerm(t *testing.T) {
 		},
 		{
 			name:    "term below minimum",
-			cols:    []string{"id", "name", "1000", "500", "500", "0 months"},
+			cols:    []string{"id", "name", "1000", "500", "500", "11 months"},
 			wantErr: true,
-			errMsg:  "term is not between 1 and 36 months",
+			errMsg:  "term is not between 12 and 72 months",
 		},
 		{
 			name:    "term above maximum",
-			cols:    []string{"id", "name", "1000", "500", "500", "37 months"},
+			cols:    []string{"id", "name", "1000", "500", "500", "73 months"},
 			wantErr: true,
-			errMsg:  "term is not between 1 and 36 months",
+			errMsg:  "term is not between 12 and 72 months",
 		},
 		{
 			name:    "negative term",
 			cols:    []string{"id", "name", "1000", "500", "500", "-5 months"},
 			wantErr: true,
-			errMsg:  "term is not between 1 and 36 months",
+			errMsg:  "term is not between 12 and 72 months",
 		},
 		{
 			name:    "missing months suffix",

@@ -73,8 +73,8 @@ func hasValidTerm(_ *validator.RowValidatorContext, cols []string) (map[string]s
 	if err != nil {
 		return nil, errors.New("term is not a number")
 	}
-	if term < 1 || term > 36 {
-		return nil, errors.New("term is not between 1 and 36 months")
+	if term < 12 || term > 72 {
+		return nil, errors.New("term is not between 12 and 72 months")
 	}
 	return map[string]string{
 		"term": strconv.Itoa(term),

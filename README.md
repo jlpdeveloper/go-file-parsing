@@ -168,56 +168,8 @@ A sample file has been generated using ChatGPT. The rules each row satisfy are l
 The below rules were generated as ways to determine if data that is being parsed in is "good" or "bad." They were generated
 using ChatGPT to analyze the columns and give recommendations on rules to add complexity to the parsing
 
-### ❌ Bad Data Rules
 
-1. **Missing or Invalid Loan Amounts**
-    - `loan_amnt`, `funded_amnt`, or `funded_amnt_inv` is zero or not a valid number.
-
-2. **Inconsistent Funding**
-    - `funded_amnt` is not equal to `funded_amnt_inv`.
-
-3. **Impossible Interest Rates**
-    - `int_rate` is less than 0 or greater than 50.
-
-4. **Invalid Grade/Subgrade**
-    - `grade` is not one of A–G or `sub_grade` doesn't match the grade pattern.
-
-5. **Missing Employment Info**
-    - `emp_title` is empty or `emp_length` is missing/null.
-
-6. **High DTI with Low Income**
-    - `dti` > 40 and `annual_inc` < 30,000.
-
-7. **Delinquency but No Credit History**
-    - `delinq_2yrs` > 0 and `earliest_cr_line` is empty.
-
-8. **FICO Range Inversion**
-    - `fico_range_low` > `fico_range_high`.
-
-9. **Invalid Revolving Utilization**
-    - `revol_util` < 0 or > 200.
-
-10. **Zero Total Accounts with High Balance**
-    - `total_acc` == 0 and `revol_bal` > 0.
-
-11. **Chargeoffs or Delinquencies Without Amounts**
-    - `num_tl_120dpd_2m`, `num_tl_90g_dpd_24m` > 0 but `delinq_amnt` == 0.
-
-12. **Missing State or Zip Code**
-    - `addr_state` or `zip_code` is empty or null.
-
-13. **Verification Mismatch**
-    - `verification_status` is “verified” but `annual_inc` is zero.
-
-14. **Public Records Inconsistent**
-    - `pub_rec` > 0 and `pub_rec_bankruptcies` == 0 and `tax_liens` == 0.
-
-15. **Negative or Impossible Dates**
-    - `mths_since_last_delinq`, `mths_since_last_record` < 0 or > 360.
-
----
-
-### ✅ Good Data Rules
+### ✅ Data Validation Rules
 
 1. **Valid Loan and Funding**
     - `loan_amnt` > 0 and `funded_amnt` == `funded_amnt_inv`.
@@ -263,3 +215,6 @@ using ChatGPT to analyze the columns and give recommendations on rules to add co
 
 15. **Verified with Income**
     - `verification_status` in [Source Verified, Verified] and `annual_inc` > 30,000.
+
+16. **Valid Term**
+    - `term` is between 12 and 72 months
