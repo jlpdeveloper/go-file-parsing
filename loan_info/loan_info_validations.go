@@ -4,6 +4,7 @@ import (
 	"errors"
 	"go-file-parsing/validator"
 	"strconv"
+	"strings"
 )
 
 func hasValidLoanAmount(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
@@ -48,5 +49,21 @@ func hasValidInterestRate(_ *validator.RowValidatorContext, cols []string) (map[
 	}
 	return map[string]string{
 		"interestRate": cols[6],
+	}, nil
+}
+
+func hasValidTerm(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+	termStr := strings.TrimSuffix(cols[5], " months")
+	termStr = strings.TrimSpace(termStr) // remove potential leading/trailing spaces
+	term, err := strconv.Atoi(termStr)
+
+	if err != nil {
+		return nil, errors.New("term is not a number")
+	}
+	if term < 1 || term > 36 {
+		return nil, errors.New("term is not between 1 and 36 months")
+	}
+	return map[string]string{
+		"term": strconv.Itoa(term),
 	}, nil
 }
