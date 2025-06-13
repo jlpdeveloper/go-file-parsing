@@ -4,20 +4,21 @@ import (
 	"context"
 	"fmt"
 	"go-file-parsing/config"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 )
 
 func TestValidate_StopsOnFirstError(t *testing.T) {
-	successValidator := func(_ *RowValidatorContext, _ []string) error {
-		return nil
+	successValidator := func(_ *RowValidatorContext, _ []string) (map[string]string, error) {
+		return nil, nil
 	}
-	errorValidator := func(_ *RowValidatorContext, _ []string) error {
-		return fmt.Errorf("bad column")
+	errorValidator := func(_ *RowValidatorContext, _ []string) (map[string]string, error) {
+		return nil, fmt.Errorf("bad column")
 	}
 	v := CsvRowValidator{
-		config:      &config.ParserConfig{},
+		config:      &config.ParserConfig{Delimiter: ","},
 		cacheClient: &MockCache{},
 		// Config as needed
 		colValidators: []ColValidator{
@@ -26,18 +27,23 @@ func TestValidate_StopsOnFirstError(t *testing.T) {
 			successValidator, // should NOT be called thanks to early exit
 		},
 	}
-	err := v.Validate("irrelevant,row,data")
+	id, err := v.Validate("irrelevant,row,data")
 	if err == nil || err.Error() != "bad column" {
 		t.Errorf("expected error from errorValidator; got %v", err)
+	}
+
+	// Even with an error, the ID (first column) should be returned
+	if id != "irrelevant" {
+		t.Errorf("expected ID to be 'irrelevant', got %s", id)
 	}
 }
 
 func TestValidate_SuccessfulValidation(t *testing.T) {
-	successValidator := func(_ *RowValidatorContext, _ []string) error {
-		return nil
+	successValidator := func(_ *RowValidatorContext, _ []string) (map[string]string, error) {
+		return nil, nil
 	}
 	v := CsvRowValidator{
-		config:      &config.ParserConfig{},
+		config:      &config.ParserConfig{Delimiter: ","},
 		cacheClient: &MockCache{},
 		colValidators: []ColValidator{
 			successValidator,
@@ -45,9 +51,14 @@ func TestValidate_SuccessfulValidation(t *testing.T) {
 			successValidator,
 		},
 	}
-	err := v.Validate("valid,row,data")
+	id, err := v.Validate("valid,row,data")
 	if err != nil {
 		t.Errorf("expected no error, got: %v", err)
+	}
+
+	// Check that the ID (first column) is correctly returned
+	if id != "valid" {
+		t.Errorf("expected ID to be 'valid', got %s", id)
 	}
 }
 
@@ -61,28 +72,33 @@ func TestValidate_ConcurrentValidation(t *testing.T) {
 	validators := make([]ColValidator, 3)
 	for i := 0; i < 3; i++ {
 		idx := i // Capture loop variable
-		validators[i] = func(_ *RowValidatorContext, _ []string) error {
+		validators[i] = func(_ *RowValidatorContext, _ []string) (map[string]string, error) {
 			defer wg.Done()
 			validatorCalled[idx] = true
 			// Add a small delay to ensure concurrency
 			time.Sleep(10 * time.Millisecond)
-			return nil
+			return nil, nil
 		}
 	}
 
 	v := CsvRowValidator{
-		config:        &config.ParserConfig{},
+		config:        &config.ParserConfig{Delimiter: ","},
 		cacheClient:   &MockCache{},
 		colValidators: validators,
 	}
 
-	err := v.Validate("test,row,data")
+	id, err := v.Validate("test,row,data")
 
 	// Wait for all validators to complete
 	wg.Wait()
 
 	if err != nil {
 		t.Errorf("expected no error, got: %v", err)
+	}
+
+	// Check that the ID (first column) is correctly returned
+	if id != "test" {
+		t.Errorf("expected ID to be 'test', got %s", id)
 	}
 
 	// Verify all validators were called
@@ -95,7 +111,7 @@ func TestValidate_ConcurrentValidation(t *testing.T) {
 
 func TestValidate_EmptyRow(t *testing.T) {
 	called := false
-	validator := func(_ *RowValidatorContext, cols []string) error {
+	validator := func(_ *RowValidatorContext, cols []string) (map[string]string, error) {
 		called = true
 		if len(cols) != 1 {
 			t.Errorf("expected 1 empty column, got %d", len(cols))
@@ -103,7 +119,7 @@ func TestValidate_EmptyRow(t *testing.T) {
 		if (cols)[0] != "" {
 			t.Errorf("expected empty string, got %s", (cols)[0])
 		}
-		return nil
+		return nil, nil
 	}
 
 	v := CsvRowValidator{
@@ -112,7 +128,7 @@ func TestValidate_EmptyRow(t *testing.T) {
 		colValidators: []ColValidator{validator},
 	}
 
-	err := v.Validate("")
+	id, err := v.Validate("")
 
 	if err != nil {
 		t.Errorf("expected no error, got: %v", err)
@@ -121,14 +137,20 @@ func TestValidate_EmptyRow(t *testing.T) {
 	if !called {
 		t.Error("validator was not called")
 	}
+
+	// Check that the ID (first column) is correctly returned
+	// For an empty row, the ID should be an empty string
+	if id != "" {
+		t.Errorf("expected ID to be empty string, got %s", id)
+	}
 }
 
 func TestValidate_DifferentDelimiter(t *testing.T) {
-	validator := func(_ *RowValidatorContext, cols []string) error {
+	validator := func(_ *RowValidatorContext, cols []string) (map[string]string, error) {
 		if len(cols) != 3 {
-			return fmt.Errorf("expected 3 columns, got %d", len(cols))
+			return nil, fmt.Errorf("expected 3 columns, got %d", len(cols))
 		}
-		return nil
+		return nil, nil
 	}
 
 	testCases := []struct {
@@ -177,10 +199,24 @@ func TestValidate_DifferentDelimiter(t *testing.T) {
 				colValidators: []ColValidator{validator},
 			}
 
-			err := v.Validate(tc.row)
+			id, err := v.Validate(tc.row)
 
 			if (err != nil) != tc.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tc.wantErr)
+			}
+
+			// Check that the ID (first column) is correctly returned
+			expectedID := ""
+			if len(tc.row) > 0 {
+				// Extract the first value based on the delimiter
+				parts := strings.Split(tc.row, tc.delimiter)
+				if len(parts) > 0 {
+					expectedID = parts[0]
+				}
+			}
+
+			if id != expectedID {
+				t.Errorf("expected ID to be '%s', got '%s'", expectedID, id)
 			}
 		})
 	}
@@ -224,10 +260,23 @@ func TestValidate_ColumnCountValidation(t *testing.T) {
 				colValidators: []ColValidator{isValidSize},
 			}
 
-			err := v.Validate(tc.row)
+			id, err := v.Validate(tc.row)
 
 			if (err != nil) != tc.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tc.wantErr)
+			}
+
+			// Check that the ID (first column) is correctly returned
+			expectedID := ""
+			if len(tc.row) > 0 {
+				parts := strings.Split(tc.row, ",")
+				if len(parts) > 0 {
+					expectedID = parts[0]
+				}
+			}
+
+			if id != expectedID {
+				t.Errorf("expected ID to be '%s', got '%s'", expectedID, id)
 			}
 		})
 	}
@@ -262,80 +311,30 @@ func (m *MockCacheWithTracking) SetField(ctx context.Context, key, field, value 
 	return nil
 }
 
-func TestValidate_CacheInteraction(t *testing.T) {
-	mockCache := &MockCacheWithTracking{}
-
-	// Create a validator that uses the cache
-	cacheValidator := func(ctx *RowValidatorContext, cols []string) error {
-		// Get something from cache
-		_, err := ctx.Cache.Get(context.Background(), "test-key")
-		if err != nil {
-			return err
-		}
-
-		// Set something in cache
-		if len(cols) > 0 {
-			return ctx.Cache.Set(context.Background(), "result-key", (cols)[0])
-		}
-
-		return nil
-	}
-
-	v := CsvRowValidator{
-		config:        &config.ParserConfig{Delimiter: ","},
-		cacheClient:   mockCache,
-		colValidators: []ColValidator{cacheValidator},
-	}
-
-	err := v.Validate("value1,value2,value3")
-
-	if err != nil {
-		t.Errorf("expected no error, got: %v", err)
-	}
-
-	// Verify cache interactions
-	if !mockCache.GetCalled {
-		t.Error("Cache Get was not called")
-	}
-	if mockCache.GetKey != "test-key" {
-		t.Errorf("Cache Get called with wrong key, got: %s, want: %s", mockCache.GetKey, "test-key")
-	}
-
-	if !mockCache.SetCalled {
-		t.Error("Cache Set was not called")
-	}
-	if mockCache.SetKey != "result-key" {
-		t.Errorf("Cache Set called with wrong key, got: %s, want: %s", mockCache.SetKey, "result-key")
-	}
-	if mockCache.SetValue != "value1" {
-		t.Errorf("Cache Set called with wrong value, got: %s, want: %s", mockCache.SetValue, "value1")
-	}
-}
-
 func TestValidate_MultipleValidators(t *testing.T) {
 	validationResults := make([]bool, 3)
 
 	validators := []ColValidator{
 		// Check first column is not empty
-		func(_ *RowValidatorContext, cols []string) error {
+		func(_ *RowValidatorContext, cols []string) (map[string]string, error) {
 			if len(cols) == 0 || (cols)[0] == "" {
-				return fmt.Errorf("first column is empty")
+				return nil, fmt.Errorf("first column is empty")
 			}
 			validationResults[0] = true
-			return nil
+			return nil, nil
 		},
 		// Check second column is a number
-		func(_ *RowValidatorContext, cols []string) error {
+		func(_ *RowValidatorContext, cols []string) (map[string]string, error) {
 			if len(cols) < 2 || !isNumeric((cols)[1]) {
-				return fmt.Errorf("second column is not a number")
+				return nil, fmt.Errorf("second column is not a number")
 			}
 			validationResults[1] = true
-			return nil
+			return nil, nil
 		},
 		// Check third column is one of allowed values
-		func(_ *RowValidatorContext, cols []string) error {
+		func(_ *RowValidatorContext, cols []string) (map[string]string, error) {
 			if len(cols) < 3 {
-				return fmt.Errorf("missing third column")
+				return nil, fmt.Errorf("missing third column")
 			}
 
 			allowedValues := []string{"A", "B", "C"}
@@ -344,11 +343,11 @@ func TestValidate_MultipleValidators(t *testing.T) {
 			for _, allowed := range allowedValues {
 				if value == allowed {
 					validationResults[2] = true
-					return nil
+					return nil, nil
 				}
 			}
 
-			return fmt.Errorf("third column value '%s' not in allowed list: %v", value, allowedValues)
+			return nil, fmt.Errorf("third column value '%s' not in allowed list: %v", value, allowedValues)
 		},
 	}
 
@@ -392,7 +391,7 @@ func TestValidate_MultipleValidators(t *testing.T) {
 				colValidators: validators,
 			}
 
-			err := v.Validate(tc.row)
+			id, err := v.Validate(tc.row)
 
 			if (err != nil) != tc.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tc.wantErr)
@@ -404,6 +403,19 @@ func TestValidate_MultipleValidators(t *testing.T) {
 					if !result {
 						t.Errorf("validator %d did not pass", i)
 					}
+				}
+
+				// Check that the ID (first column) is correctly returned
+				expectedID := ""
+				if len(tc.row) > 0 {
+					parts := strings.Split(tc.row, ",")
+					if len(parts) > 0 {
+						expectedID = parts[0]
+					}
+				}
+
+				if id != expectedID {
+					t.Errorf("expected ID to be '%s', got '%s'", expectedID, id)
 				}
 			}
 		})

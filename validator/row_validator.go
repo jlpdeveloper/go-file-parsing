@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"context"
 	"go-file-parsing/cache"
 	"go-file-parsing/config"
 	"golang.org/x/sync/errgroup"
@@ -13,22 +14,44 @@ type CsvRowValidator struct {
 	colValidators []ColValidator
 }
 
-func (c *CsvRowValidator) Validate(row string) error {
+func (c *CsvRowValidator) Validate(row string) (string, error) {
+	//First we create a channel to write to the cache
+	ctx := context.Background()
+	//Create a channel for writing to the cache. Defer closing it
+	cacheChan := make(chan map[string]string, 100)
+	defer close(cacheChan)
+	//Split the columns, then set the first value to the raw data string (for debug purposes)
 	cols := strings.Split(row, c.config.Delimiter)
+	//Spin off a new goroutine that will write to the cache as it processes from the channel
+	go func() {
+		for data := range cacheChan {
+			for key, value := range data {
+				_ = c.cacheClient.SetField(ctx, cols[0], key, value)
+			}
+		}
+	}()
+
+	_ = c.cacheClient.SetField(ctx, cols[0], "raw", row)
+	_ = c.cacheClient.SetField(ctx, cols[0], "id", cols[0])
 
 	vCtx := RowValidatorContext{
 		Config: c.config,
-		Cache:  c.cacheClient,
 	}
-
 	var g errgroup.Group
 
 	for _, validator := range c.colValidators {
 		f := validator // capture
 		g.Go(func() error {
-			return f(&vCtx, cols)
+			data, err := f(&vCtx, cols)
+			if err != nil {
+				return err
+			}
+			if data != nil {
+				cacheChan <- data
+			}
+			return nil
 		})
 	}
 
-	return g.Wait() // returns first error (if any), cancels other goroutines
+	return cols[0], g.Wait() // returns first error (if any), cancels other goroutines
 }

@@ -7,17 +7,17 @@ import (
 
 type RowError struct {
 	Row   int64
+	Id    string
 	Error error
 }
-type ColValidator func(*RowValidatorContext, []string) error
+type ColValidator func(*RowValidatorContext, []string) (map[string]string, error)
 
 type RowValidatorContext struct {
 	Config *config.ParserConfig
-	Cache  cache.DistributedCache
 }
 
 type RowValidator interface {
-	Validate(row string) error
+	Validate(row string) (string, error)
 }
 
 func NewCsvRowValidatorPool(conf *config.ParserConfig, cache cache.DistributedCache, poolSize int) chan CsvRowValidator {
@@ -34,4 +34,6 @@ func NewCsvRowValidatorPool(conf *config.ParserConfig, cache cache.DistributedCa
 
 var validators = []ColValidator{
 	isValidSize,
+	hasValidLoanAmount,
+	hasValidInterestRate,
 }
