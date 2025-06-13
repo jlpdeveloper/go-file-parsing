@@ -179,42 +179,30 @@ using ChatGPT to analyze the columns and give recommendations on rules to add co
 
 3. **Valid Grade/Subgrade**
     - `grade` in [A–G], `sub_grade` matches pattern like `B3`.
+   
+4. **Valid Term**
+   - `term` is between 12 and 72 months
 
-4. **Has Employment Info**
+5. **Has Employment Info**
     - Non-empty `emp_title` and `emp_length` is not null.
 
-5. **Low DTI and Home Ownership**
+6. **Low DTI and Home Ownership**
     - `dti` < 20, `home_ownership` in [MORTGAGE, OWN], and `annual_inc` > 40,000.
 
-6. **Established Credit History**
+7. **Established Credit History**
     - `earliest_cr_line` not null and is > 10 years ago.
 
-7. **Healthy FICO Score**
+8. **Healthy FICO Score**
     - `fico_range_low` >= 660 and `fico_range_high` <= 850.
 
-8. **Low Delinquencies**
-    - `delinq_2yrs` == 0, `mths_since_last_delinq` is null or > 24.
+9. **Has Sufficient Accounts**
+   - `total_acc` >= 5 and `open_acc` >= 2.
 
-9. **Valid Utilization**
-    - `revol_util` between 0 and 100.
-
-10. **Has Sufficient Accounts**
-    - `total_acc` >= 5 and `open_acc` >= 2.
-
-11. **Stable Employment**
+10. **Stable Employment**
     - `emp_length` in [5 years, 6 years, 7 years, 8 years, 9 years, 10+ years].
 
-12. **No Public Record or Bankruptcies**
+11. **No Public Record or Bankruptcies**
     - `pub_rec` == 0 and `pub_rec_bankruptcies` == 0 and `tax_liens` == 0.
 
-13. **Good Payment History**
-    - `num_tl_90g_dpd_24m`, `num_tl_30dpd`, `num_tl_120dpd_2m` == 0.
-
-14. **Has Mortgage and Recent Credit Pull**
-    - `mort_acc` >= 1 and `last_credit_pull_d` is not null.
-
-15. **Verified with Income**
+12. **Verified with Income**
     - `verification_status` in [Source Verified, Verified] and `annual_inc` > 30,000.
-
-16. **Valid Term**
-    - `term` is between 12 and 72 months
