@@ -12,6 +12,14 @@ var validators = []validator.ColValidator{
 	hasValidInterestRate,
 	hasValidGradeSubgrade,
 	hasValidTerm,
+	hasEmploymentInfo,
+	hasLowDTIAndHomeOwnership,
+	hasEstablishedCreditHistory,
+	hasHealthyFICOScore,
+	hasSufficientAccounts,
+	hasStableEmployment,
+	hasNoPublicRecordOrBankruptcies,
+	isVerifiedWithIncome,
 	passExtraData,
 }
 
