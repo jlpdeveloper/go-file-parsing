@@ -347,10 +347,9 @@ func TestHasValidGradeSubgrade(t *testing.T) {
 			errMsg:  "grade must be a single letter from A to G",
 		},
 		{
-			name:    "invalid grade lowercase a",
+			name:    "valid grade lowercase a",
 			cols:    []string{"id", "name", "1000", "500", "500", "36", "10.0", "250.0", "a", "a1"},
-			wantErr: true,
-			errMsg:  "grade must be a single letter from A to G",
+			wantErr: false,
 		},
 		{
 			name:    "invalid grade multiple letters",

@@ -107,10 +107,12 @@ func hasValidTerm(vCtx *validator.RowValidatorContext, cols []string) (map[strin
 
 func hasValidGradeSubgrade(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	// Grade is in column 8 (index 8, 0-based)
-	grade := utils.TrimIfNeeded(cols[8])
+	originalGrade := utils.TrimIfNeeded(cols[8])
+	grade := strings.ToUpper(originalGrade)
 
 	// Subgrade is in column 9 (index 9, 0-based)
-	subgrade := utils.TrimIfNeeded(cols[9])
+	originalSubgrade := utils.TrimIfNeeded(cols[9])
+	subgrade := strings.ToUpper(originalSubgrade)
 
 	// Check if grade is a single letter from A to G using precompiled regex
 	if !gradeRegex.MatchString(grade) {
@@ -129,8 +131,8 @@ func hasValidGradeSubgrade(vCtx *validator.RowValidatorContext, cols []string) (
 
 	// Get a map from the pool
 	result := vCtx.GetMap()
-	result["grade"] = grade
-	result["subgrade"] = subgrade
+	result["grade"] = originalGrade
+	result["subgrade"] = originalSubgrade
 
 	return result, nil
 }
