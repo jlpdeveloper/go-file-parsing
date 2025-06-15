@@ -1,7 +1,6 @@
 package loan_info
 
 import (
-	"errors"
 	"go-file-parsing/utils"
 	"go-file-parsing/validator"
 	"regexp"
@@ -26,27 +25,27 @@ var (
 func hasValidLoanAmount(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	loanAmount, err := strconv.Atoi(cols[2])
 	if err != nil {
-		return nil, errors.New("loan amount is not a number")
+		return nil, ErrLoanAmountNotNumber
 	}
 	if loanAmount <= 0 {
-		return nil, errors.New("loan amount is not a positive number")
+		return nil, ErrLoanAmountNotPositive
 	}
 	fundingAmount, err := strconv.Atoi(cols[3])
 	if err != nil {
-		return nil, errors.New("funding amount is not a number")
+		return nil, ErrFundingAmountNotNumber
 	}
 	if fundingAmount <= 0 {
-		return nil, errors.New("funding amount is not a positive number")
+		return nil, ErrFundingAmountNotPositive
 	}
 	fundingInvAmt, err := strconv.Atoi(cols[4])
 	if err != nil {
-		return nil, errors.New("funding inv amt is not a number")
+		return nil, ErrFundingInvAmtNotNumber
 	}
 	if fundingInvAmt <= 0 {
-		return nil, errors.New("funding inv amt is not a positive number")
+		return nil, ErrFundingInvAmtNotPositive
 	}
 	if fundingInvAmt != fundingAmount {
-		return nil, errors.New("funding inv amt is not equal to funding amount")
+		return nil, ErrFundingInvAmtNotEqual
 	}
 
 	// Get a map from the pool
@@ -61,10 +60,10 @@ func hasValidLoanAmount(vCtx *validator.RowValidatorContext, cols []string) (map
 func hasValidInterestRate(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	rate, err := strconv.ParseFloat(cols[6], 64)
 	if err != nil {
-		return nil, errors.New("interest rate is not a number")
+		return nil, ErrInterestRateNotNumber
 	}
 	if rate < 5 || rate > 35 {
-		return nil, errors.New("interest rate is not between 5% and 35%")
+		return nil, ErrInterestRateOutOfRange
 	}
 
 	// Get a map from the pool
@@ -93,10 +92,10 @@ func hasValidTerm(vCtx *validator.RowValidatorContext, cols []string) (map[strin
 	term, err := strconv.Atoi(termStr)
 
 	if err != nil {
-		return nil, errors.New("term is not a number")
+		return nil, ErrTermNotNumber
 	}
 	if term < 12 || term > 72 {
-		return nil, errors.New("term is not between 12 and 72 months")
+		return nil, ErrTermOutOfRange
 	}
 
 	// Get a map from the pool
@@ -115,17 +114,17 @@ func hasValidGradeSubgrade(vCtx *validator.RowValidatorContext, cols []string) (
 
 	// Check if grade is a single letter from A to G using precompiled regex
 	if !gradeRegex.MatchString(grade) {
-		return nil, errors.New("grade must be a single letter from A to G")
+		return nil, ErrGradeInvalid
 	}
 
 	// Check if subgrade matches the pattern of grade letter followed by a number from 1 to 5
 	// using the precompiled regex for the specific grade
 	if regex, exists := subgradeRegexes[grade]; exists {
 		if !regex.MatchString(subgrade) {
-			return nil, errors.New("subgrade must be the grade letter followed by a number from 1 to 5")
+			return nil, ErrSubgradeInvalid
 		}
 	} else {
-		return nil, errors.New("invalid grade for subgrade validation")
+		return nil, ErrGradeForSubgradeInvalid
 	}
 
 	// Get a map from the pool

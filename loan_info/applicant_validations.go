@@ -1,7 +1,6 @@
 package loan_info
 
 import (
-	"errors"
 	"go-file-parsing/utils"
 	"go-file-parsing/validator"
 	"strconv"
@@ -16,11 +15,11 @@ func hasEmploymentInfo(vCtx *validator.RowValidatorContext, cols []string) (map[
 	empLength := utils.TrimIfNeeded(cols[11])
 
 	if empTitle == "" {
-		return nil, errors.New("employment title is empty")
+		return nil, ErrEmpTitleEmpty
 	}
 
 	if empLength == "" {
-		return nil, errors.New("employment length is empty")
+		return nil, ErrEmpLengthEmpty
 	}
 
 	// Get a map from the pool
@@ -40,24 +39,24 @@ func hasLowDTIAndHomeOwnership(vCtx *validator.RowValidatorContext, cols []strin
 
 	dti, err := strconv.ParseFloat(dtiStr, 64)
 	if err != nil {
-		return nil, errors.New("DTI is not a number")
+		return nil, ErrDTINotNumber
 	}
 
 	if dti >= 20 {
-		return nil, errors.New("DTI is not less than 20")
+		return nil, ErrDTITooHigh
 	}
 
 	if homeOwnership != "MORTGAGE" && homeOwnership != "OWN" {
-		return nil, errors.New("home ownership is not MORTGAGE or OWN")
+		return nil, ErrHomeOwnershipInvalid
 	}
 
 	annualInc, err := strconv.ParseFloat(annualIncStr, 64)
 	if err != nil {
-		return nil, errors.New("annual income is not a number")
+		return nil, ErrAnnualIncNotNumber
 	}
 
 	if annualInc <= 40000 {
-		return nil, errors.New("annual income is not greater than 40,000")
+		return nil, ErrAnnualIncTooLow40K
 	}
 
 	// Get a map from the pool
@@ -75,19 +74,19 @@ func hasEstablishedCreditHistory(vCtx *validator.RowValidatorContext, cols []str
 	earliestCrLine := utils.TrimIfNeeded(cols[38])
 
 	if earliestCrLine == "" {
-		return nil, errors.New("earliest credit line is empty")
+		return nil, ErrEarliestCrLineEmpty
 	}
 
 	// Parse the date in format YYYY-MM
 	crDate, err := time.Parse("2006-01", earliestCrLine)
 	if err != nil {
-		return nil, errors.New("earliest credit line is not in valid format (YYYY-MM)")
+		return nil, ErrEarliestCrLineFormat
 	}
 
 	// Check if the date is more than 10 years ago
 	tenYearsAgo := time.Now().AddDate(-10, 0, 0)
 	if crDate.After(tenYearsAgo) {
-		return nil, errors.New("earliest credit line is not more than 10 years ago")
+		return nil, ErrEarliestCrLineTooRecent
 	}
 
 	// Get a map from the pool
@@ -105,20 +104,20 @@ func hasHealthyFICOScore(vCtx *validator.RowValidatorContext, cols []string) (ma
 
 	ficoRangeLow, err := strconv.Atoi(ficoRangeLowStr)
 	if err != nil {
-		return nil, errors.New("FICO range low is not a number")
+		return nil, ErrFICORangeLowNotNumber
 	}
 
 	ficoRangeHigh, err := strconv.Atoi(ficoRangeHighStr)
 	if err != nil {
-		return nil, errors.New("FICO range high is not a number")
+		return nil, ErrFICORangeHighNotNumber
 	}
 
 	if ficoRangeLow < 660 {
-		return nil, errors.New("FICO range low is less than 660")
+		return nil, ErrFICORangeLowTooLow
 	}
 
 	if ficoRangeHigh > 850 {
-		return nil, errors.New("FICO range high is greater than 850")
+		return nil, ErrFICORangeHighTooHigh
 	}
 
 	// Get a map from the pool
@@ -137,20 +136,20 @@ func hasSufficientAccounts(vCtx *validator.RowValidatorContext, cols []string) (
 
 	totalAcc, err := strconv.Atoi(totalAccStr)
 	if err != nil {
-		return nil, errors.New("total accounts is not a number")
+		return nil, ErrTotalAccNotNumber
 	}
 
 	openAcc, err := strconv.Atoi(openAccStr)
 	if err != nil {
-		return nil, errors.New("open accounts is not a number")
+		return nil, ErrOpenAccNotNumber
 	}
 
 	if totalAcc < 5 {
-		return nil, errors.New("total accounts is less than 5")
+		return nil, ErrTotalAccTooFew
 	}
 
 	if openAcc < 2 {
-		return nil, errors.New("open accounts is less than 2")
+		return nil, ErrOpenAccTooFew
 	}
 
 	// Get a map from the pool
@@ -175,7 +174,7 @@ func hasStableEmployment(vCtx *validator.RowValidatorContext, cols []string) (ma
 	}
 
 	if !validEmpLengths[empLength] {
-		return nil, errors.New("employment length is not stable (5-10+ years)")
+		return nil, ErrEmpLengthNotStable
 	}
 
 	// Get a map from the pool
@@ -194,29 +193,29 @@ func hasNoPublicRecordOrBankruptcies(vCtx *validator.RowValidatorContext, cols [
 
 	pubRec, err := strconv.Atoi(pubRecStr)
 	if err != nil {
-		return nil, errors.New("public records is not a number")
+		return nil, ErrPubRecNotNumber
 	}
 
 	pubRecBankruptcies, err := strconv.Atoi(pubRecBankruptciesStr)
 	if err != nil {
-		return nil, errors.New("public record bankruptcies is not a number")
+		return nil, ErrPubRecBankruptciesNotNumber
 	}
 
 	taxLiens, err := strconv.Atoi(taxLiensStr)
 	if err != nil {
-		return nil, errors.New("tax liens is not a number")
+		return nil, ErrTaxLiensNotNumber
 	}
 
 	if pubRec != 0 {
-		return nil, errors.New("public records is not zero")
+		return nil, ErrPubRecNotZero
 	}
 
 	if pubRecBankruptcies != 0 {
-		return nil, errors.New("public record bankruptcies is not zero")
+		return nil, ErrPubRecBankruptciesNotZero
 	}
 
 	if taxLiens != 0 {
-		return nil, errors.New("tax liens is not zero")
+		return nil, ErrTaxLiensNotZero
 	}
 
 	// Get a map from the pool
@@ -240,16 +239,16 @@ func isVerifiedWithIncome(vCtx *validator.RowValidatorContext, cols []string) (m
 	}
 
 	if !validVerificationStatuses[verificationStatus] {
-		return nil, errors.New("verification status is not Source Verified or Verified")
+		return nil, ErrVerificationStatusInvalid
 	}
 
 	annualInc, err := strconv.ParseFloat(annualIncStr, 64)
 	if err != nil {
-		return nil, errors.New("annual income is not a number")
+		return nil, ErrAnnualIncNotNumber
 	}
 
 	if annualInc <= 30000 {
-		return nil, errors.New("annual income is not greater than 30,000")
+		return nil, ErrAnnualIncTooLow30K
 	}
 
 	// Get a map from the pool
