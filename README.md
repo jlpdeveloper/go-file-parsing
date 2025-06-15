@@ -1,9 +1,219 @@
 # GO File Parsing Experiments
-This application is an experiment in using Go's high concurrency to parse file data and store in a redis cache. 
+
+This application is an experiment in using Go's high concurrency to parse file data and store in a Redis-compatible cache (Valkey). It demonstrates efficient techniques for processing large CSV files using Go's concurrency features.
 
 > [!IMPORTANT]
 > This application has no real world use, it is meant to be an experiment and possibly a model for how 
 > Go can be used to efficiently read large files.
+
+## Project Overview
+
+This project demonstrates:
+- Concurrent CSV file parsing using goroutines
+- Efficient validation of data rows against business rules
+- Caching valid data in a Redis-compatible database (Valkey)
+- Memory-efficient processing using object pools
+- Error handling and reporting
+
+## Project Structure
+
+```
+go-file-parsing/
+├── cache/              # Cache abstraction and implementation
+│   ├── cache.go        # Cache interface definition
+│   ├── parser_cache.go # Valkey implementation of cache
+│   └── cache_test.go   # Tests for cache functionality
+├── config/             # Configuration handling
+│   └── config.go       # Parser configuration
+├── loan_info/          # Domain-specific validation logic
+│   ├── loan_info.go    # Main validation rules
+│   ├── *_validations.go # Specific validation implementations
+│   └── *_test.go       # Tests for validations
+├── utils/              # Utility functions
+│   └── string_utils.go # String manipulation utilities
+├── validator/          # Generic validation framework
+│   ├── row_validator.go # Row validation logic
+│   ├── column_utils.go  # Column processing utilities
+│   └── map_pool.go     # Memory-efficient map pool
+├── main.go             # Application entry point
+├── config.json         # Parser configuration
+├── dev.compose.yml     # Docker Compose for development
+└── sample.csv          # Sample data file
+```
+
+## How It Works
+
+1. The application reads a CSV file line by line
+2. For each row, it:
+   - Allocates a validator from a pool
+   - Validates the row concurrently using multiple validation rules
+   - Stores valid data in the cache
+   - Collects and reports validation errors
+3. After processing, it cleans up any invalid data from the cache
+
+The application uses Go's concurrency primitives (goroutines, channels, wait groups, and errgroup) to process rows efficiently.
+
+## Dependencies
+
+- Go 1.24 or later
+- [valkey-io/valkey-go](https://github.com/valkey-io/valkey-go) v1.0.60 - Redis-compatible client library
+- [golang.org/x/sync](https://pkg.go.dev/golang.org/x/sync) v0.15.0 - Additional synchronization primitives
+- [Valkey](https://valkey.io/) - Redis-compatible database (via Docker)
+
+## Setup and Installation
+
+### Prerequisites
+
+- Go 1.24 or later
+- Docker and Docker Compose (for running Valkey)
+
+### Steps
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/go-file-parsing.git
+   cd go-file-parsing
+   ```
+
+2. Start the Valkey container:
+   ```bash
+   docker-compose -f dev.compose.yml up -d
+   ```
+
+3. Set the environment variable for Valkey:
+   ```bash
+   # For Windows PowerShell
+   $env:VALKEY_URLS = "localhost:6379"
+
+   # For Linux/macOS
+   export VALKEY_URLS="localhost:6379"
+   ```
+
+4. Run the application:
+   ```bash
+   go run main.go
+   ```
+
+## Usage
+
+The application is configured via the `config.json` file:
+
+```json
+{
+  "HasHeader": true,
+  "Delimiter": ",",
+  "ExpectedColumns": 156
+}
+```
+
+- `HasHeader`: Set to true if the CSV file has a header row
+- `Delimiter`: The character used to separate columns
+- `ExpectedColumns`: The expected number of columns in each row
+
+To use your own CSV file, modify the `parseFile` function call in `main.go`:
+
+```
+// In main.go
+parseFile("your-file.csv", cacheClient)
+```
+
+## Performance Considerations
+
+- The application uses a pool of validators to limit memory usage
+- Each row is processed concurrently, with validation rules applied in parallel
+- The map pool pattern is used to reduce garbage collection pressure
+- Buffer sizes are configurable to balance memory usage and performance
+
+## Reuse considerations
+If you wish to reuse this project, here are some considerations to help you adapt it to your needs:
+
+### Extracting Validations as a Separate Package
+
+The validation framework in this project is designed to be modular and reusable. You could extract the validation logic into its own package or even a separate library:
+
+1. **Core Validation Framework**: The `validator` package contains the core validation framework, including:
+   - `RowValidator` interface and `CsvRowValidator` implementation
+   - `ColValidator` function type for individual column validations
+   - Map pooling for efficient memory usage
+
+2. **Domain-Specific Validations**: The `loan_info` package contains domain-specific validations that could be moved to a separate package:
+   - Validation functions like `hasValidLoanAmount`, `hasValidInterestRate`, etc.
+   - Error definitions specific to loan data validation
+   - The validator registration in `loan_info.go`
+
+### Adding Different File-Based Validators
+
+To add support for different file types or data domains:
+
+1. **Create a New Domain Package**: Similar to the `loan_info` package, create a new package for your domain:
+   ```
+   your-domain/
+   ├── domain.go             # Register validators and create validator pool
+   ├── errors.go             # Define domain-specific errors
+   ├── validations.go        # Implement domain-specific validation functions
+   └── row_shape_validations.go # Basic structure validations
+   ```
+
+2. **Implement Validation Functions**: Create functions that follow the `ColValidator` signature:
+   ```
+   // Example validation function
+   func yourValidationFunction(ctx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+       // Validation logic here
+
+       // If validation passes, optionally return data to cache
+       result := ctx.GetMap()
+       result["key"] = "value"
+
+       return result, nil // or return nil, yourError
+   }
+   ```
+
+3. **Register Validators**: Create a slice of validators in your domain package:
+   ```
+   // Example validator registration
+   var validators = []validator.ColValidator{
+       isValidSize,
+       yourValidationFunction1,
+       yourValidationFunction2,
+       // ...
+   }
+   ```
+
+4. **Create Validator Pool**: Implement a function to create a pool of validators:
+   ```
+   // Example validator pool creation
+   func NewRowValidatorPool(conf *config.ParserConfig, cache cache.DistributedCache, poolSize int) chan validator.CsvRowValidator {
+       pool := make(chan validator.CsvRowValidator, poolSize)
+       for i := 0; i < poolSize; i++ {
+           pool <- validator.New(conf, cache, validators)
+       }
+       return pool
+   }
+   ```
+
+5. **Update Main Application**: Modify `main.go` to use your new validator pool:
+   ```
+   // Example usage in main.go
+   pool := your_domain.NewRowValidatorPool(&conf, cacheClient, 100)
+   ```
+
+### Best Practices for Extension
+
+1. **Keep Validators Focused**: Each validator function should validate one specific aspect of the data.
+
+2. **Use Error Constants**: Define error constants in an `errors.go` file for consistent error messages.
+
+3. **Reuse Maps**: Always use the map pool (`ctx.GetMap()`) to get maps for returning data.
+
+4. **Concurrent Safety**: Ensure your validators are safe for concurrent use.
+
+5. **Testing**: Write comprehensive tests for each validator function.
+
+6. **Configuration**: Use the configuration system to make your validators configurable.
+
+7. **Documentation**: Document your validators and their expected behavior.
+
+By following these guidelines, you can extend this project to handle different types of file parsing and validation while maintaining its performance and memory efficiency.
 
 ## Data
 The data I'm using for this experiment is from [kaggle](https://www.kaggle.com/datasets/wordsforthewise/lending-club?resource=download)
@@ -171,16 +381,16 @@ using ChatGPT to analyze the columns and give recommendations on rules to add co
 
 ### ✅ Data Validation Rules
 
-1. **Valid Loan and Funding** ✅
+1. **Valid Loan and Funding** 
     - `loan_amnt` > 0 and `funded_amnt` == `funded_amnt_inv`.
 
-2. **Reasonable Interest Rate** ✅
+2. **Reasonable Interest Rate** 
     - `int_rate` between 5% and 35%.
 
-3. **Valid Grade/Subgrade** ✅
+3. **Valid Grade/Subgrade** 
     - `grade` in [A–G], `sub_grade` matches pattern like `B3`.
-   
-4. **Valid Term** ✅
+
+4. **Valid Term** 
    - `term` is between 12 and 72 months
 
 5. **Has Employment Info**
@@ -214,3 +424,11 @@ using ChatGPT to analyze the columns and give recommendations on rules to add co
   - `annual_inc_joint` if type: `Joint App`
 - `tot_coll_amt`
 - `acc_now_delinq`
+
+## Contributing
+
+This project is an experiment and demonstration. Feel free to fork it and adapt it to your needs. If you have suggestions for improvements, please open an issue or submit a pull request.
+
+## License
+
+This project is licensed under the terms found in the LICENSE file in the root of this repository.
