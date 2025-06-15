@@ -53,5 +53,5 @@ func (c *CsvRowValidator) Validate(row string) (string, error) {
 		})
 	}
 
-	return cols[0], g.Wait() // returns first error (if any), cancels other goroutines
+	return cols[0], g.Wait() // returns the first error (if any), cancels other goroutines
 }

@@ -9,6 +9,20 @@ import (
 	"strings"
 )
 
+// Precompiled regex patterns for grade and subgrade validation
+var (
+	gradeRegex      = regexp.MustCompile(`^[A-G]$`)
+	subgradeRegexes = map[string]*regexp.Regexp{
+		"A": regexp.MustCompile(`^A[1-5]$`),
+		"B": regexp.MustCompile(`^B[1-5]$`),
+		"C": regexp.MustCompile(`^C[1-5]$`),
+		"D": regexp.MustCompile(`^D[1-5]$`),
+		"E": regexp.MustCompile(`^E[1-5]$`),
+		"F": regexp.MustCompile(`^F[1-5]$`),
+		"G": regexp.MustCompile(`^G[1-5]$`),
+	}
+)
+
 func hasValidLoanAmount(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	loanAmount, err := strconv.Atoi(cols[2])
 	if err != nil {
@@ -90,15 +104,19 @@ func hasValidGradeSubgrade(_ *validator.RowValidatorContext, cols []string) (map
 	// Subgrade is in column 9 (index 9, 0-based)
 	subgrade := utils.TrimIfNeeded(cols[9])
 
-	// Check if grade is a single letter from A to G
-	if !regexp.MustCompile(`^[A-G]$`).MatchString(grade) {
+	// Check if grade is a single letter from A to G using precompiled regex
+	if !gradeRegex.MatchString(grade) {
 		return nil, errors.New("grade must be a single letter from A to G")
 	}
 
 	// Check if subgrade matches the pattern of grade letter followed by a number from 1 to 5
-	expectedPattern := "^" + grade + "[1-5]$"
-	if !regexp.MustCompile(expectedPattern).MatchString(subgrade) {
-		return nil, errors.New("subgrade must be the grade letter followed by a number from 1 to 5")
+	// using the precompiled regex for the specific grade
+	if regex, exists := subgradeRegexes[grade]; exists {
+		if !regex.MatchString(subgrade) {
+			return nil, errors.New("subgrade must be the grade letter followed by a number from 1 to 5")
+		}
+	} else {
+		return nil, errors.New("invalid grade for subgrade validation")
 	}
 
 	return map[string]string{
