@@ -29,7 +29,7 @@ func (c *CsvRowValidator) Validate(row string) (string, error) {
 				_ = c.cacheClient.SetField(ctx, cols[0], key, value)
 			}
 			// Return the map to the pool after use
-			putMap(data)
+			PutMap(data)
 		}
 	}()
 
@@ -38,7 +38,7 @@ func (c *CsvRowValidator) Validate(row string) (string, error) {
 
 	vCtx := RowValidatorContext{
 		Config: c.config,
-		GetMap: getMap,
+		GetMap: GetMap,
 	}
 	var g errgroup.Group
 

@@ -78,6 +78,7 @@ func TestPassExtraData(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
+				GetMap: validator.GetMap,
 			}
 
 			result, err := passExtraData(ctx, tc.cols)

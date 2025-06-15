@@ -43,6 +43,7 @@ func TestHasEmploymentInfo(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
+				GetMap: validator.GetMap,
 			}
 
 			result, err := hasEmploymentInfo(ctx, tc.cols)
@@ -124,6 +125,7 @@ func TestHasLowDTIAndHomeOwnership(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
+				GetMap: validator.GetMap,
 			}
 
 			result, err := hasLowDTIAndHomeOwnership(ctx, tc.cols)
@@ -201,6 +203,7 @@ func TestHasEstablishedCreditHistory(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
+				GetMap: validator.GetMap,
 			}
 
 			result, err := hasEstablishedCreditHistory(ctx, tc.cols)
@@ -273,6 +276,7 @@ func TestHasHealthyFICOScore(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
+				GetMap: validator.GetMap,
 			}
 
 			result, err := hasHealthyFICOScore(ctx, tc.cols)
@@ -348,6 +352,7 @@ func TestHasSufficientAccounts(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
+				GetMap: validator.GetMap,
 			}
 
 			result, err := hasSufficientAccounts(ctx, tc.cols)
@@ -442,6 +447,7 @@ func TestHasStableEmployment(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
+				GetMap: validator.GetMap,
 			}
 
 			result, err := hasStableEmployment(ctx, tc.cols)
@@ -526,6 +532,7 @@ func TestHasNoPublicRecordOrBankruptcies(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
+				GetMap: validator.GetMap,
 			}
 
 			result, err := hasNoPublicRecordOrBankruptcies(ctx, tc.cols)
@@ -609,6 +616,7 @@ func TestIsVerifiedWithIncome(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
+				GetMap: validator.GetMap,
 			}
 
 			result, err := isVerifiedWithIncome(ctx, tc.cols)

@@ -86,6 +86,7 @@ func TestHasValidLoanAmount(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
+				GetMap: validator.GetMap,
 			}
 
 			result, err := hasValidLoanAmount(ctx, tc.cols)
@@ -168,6 +169,7 @@ func TestHasValidInterestRate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
+				GetMap: validator.GetMap,
 			}
 
 			result, err := hasValidInterestRate(ctx, tc.cols)
@@ -266,6 +268,7 @@ func TestHasValidTerm(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
+				GetMap: validator.GetMap,
 			}
 
 			result, err := hasValidTerm(ctx, tc.cols)
@@ -391,6 +394,7 @@ func TestHasValidGradeSubgrade(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
+				GetMap: validator.GetMap,
 			}
 
 			result, err := hasValidGradeSubgrade(ctx, tc.cols)

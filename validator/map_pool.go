@@ -10,12 +10,12 @@ var MapPool = &sync.Pool{
 }
 
 // GetMap retrieves a map from the pool or creates a new one if none is available
-func getMap() map[string]string {
+func GetMap() map[string]string {
 	return MapPool.Get().(map[string]string)
 }
 
 // PutMap returns a map to the pool after clearing its contents
-func putMap(m map[string]string) {
+func PutMap(m map[string]string) {
 	// Clear the map before returning it to the pool
 	for k := range m {
 		delete(m, k)
