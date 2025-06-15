@@ -1,8 +1,7 @@
 package validator
 
 import (
-	"strings"
-	"unicode"
+	"go-file-parsing/utils"
 )
 
 // PreprocessColumns trims whitespace from all columns in the input slice.
@@ -11,11 +10,7 @@ import (
 func PreprocessColumns(cols []string) []string {
 	trimmedCols := make([]string, len(cols))
 	for i, col := range cols {
-		if len(col) > 0 && (unicode.IsSpace(rune(col[0])) || unicode.IsSpace(rune(col[len(col)-1]))) {
-			trimmedCols[i] = strings.TrimSpace(col)
-		} else {
-			trimmedCols[i] = col
-		}
+		trimmedCols[i] = utils.TrimIfNeeded(col)
 	}
 	return trimmedCols
 }
