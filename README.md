@@ -171,16 +171,16 @@ using ChatGPT to analyze the columns and give recommendations on rules to add co
 
 ### ✅ Data Validation Rules
 
-1. **Valid Loan and Funding**
+1. **Valid Loan and Funding** ✅
     - `loan_amnt` > 0 and `funded_amnt` == `funded_amnt_inv`.
 
-2. **Reasonable Interest Rate**
+2. **Reasonable Interest Rate** ✅
     - `int_rate` between 5% and 35%.
 
-3. **Valid Grade/Subgrade**
+3. **Valid Grade/Subgrade** ✅
     - `grade` in [A–G], `sub_grade` matches pattern like `B3`.
    
-4. **Valid Term**
+4. **Valid Term** ✅
    - `term` is between 12 and 72 months
 
 5. **Has Employment Info**

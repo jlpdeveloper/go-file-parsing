@@ -12,6 +12,7 @@ var validators = []validator.ColValidator{
 	hasValidInterestRate,
 	hasValidGradeSubgrade,
 	hasValidTerm,
+	passExtraData,
 }
 
 func NewRowValidatorPool(conf *config.ParserConfig, cache cache.DistributedCache, poolSize int) chan validator.CsvRowValidator {
