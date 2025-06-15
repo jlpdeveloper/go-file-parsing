@@ -17,5 +17,9 @@ func (p *MockCache) SetField(ctx context.Context, key, field, value string) erro
 	return nil
 }
 
+func (p *MockCache) Delete(ctx context.Context, key string) error {
+	return nil
+}
+
 func (p *MockCache) Close() {
 }
