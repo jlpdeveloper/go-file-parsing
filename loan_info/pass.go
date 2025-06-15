@@ -2,8 +2,9 @@ package loan_info
 
 import "go-file-parsing/validator"
 
-func passExtraData(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
-	result := make(map[string]string)
+func passExtraData(ctx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+	// Get a map from the pool
+	result := ctx.GetMap()
 
 	// Check if we have enough columns
 	if len(cols) < 93 { // avg_cur_bal is at index 92, which is the highest index we need

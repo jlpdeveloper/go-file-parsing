@@ -14,6 +14,7 @@ type ColValidator func(*RowValidatorContext, []string) (map[string]string, error
 
 type RowValidatorContext struct {
 	Config *config.ParserConfig
+	GetMap func() map[string]string
 }
 
 type RowValidator interface {

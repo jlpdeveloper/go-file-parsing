@@ -23,7 +23,7 @@ var (
 	}
 )
 
-func hasValidLoanAmount(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+func hasValidLoanAmount(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	loanAmount, err := strconv.Atoi(cols[2])
 	if err != nil {
 		return nil, errors.New("loan amount is not a number")
@@ -48,14 +48,17 @@ func hasValidLoanAmount(_ *validator.RowValidatorContext, cols []string) (map[st
 	if fundingInvAmt != fundingAmount {
 		return nil, errors.New("funding inv amt is not equal to funding amount")
 	}
-	return map[string]string{
-		"loanAmount":    cols[2],
-		"fundingAmount": cols[3],
-		"fundingInvAmt": cols[4],
-	}, nil
+
+	// Get a map from the pool
+	result := vCtx.GetMap()
+	result["loanAmount"] = cols[2]
+	result["fundingAmount"] = cols[3]
+	result["fundingInvAmt"] = cols[4]
+
+	return result, nil
 }
 
-func hasValidInterestRate(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+func hasValidInterestRate(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	rate, err := strconv.ParseFloat(cols[6], 64)
 	if err != nil {
 		return nil, errors.New("interest rate is not a number")
@@ -63,12 +66,15 @@ func hasValidInterestRate(_ *validator.RowValidatorContext, cols []string) (map[
 	if rate < 5 || rate > 35 {
 		return nil, errors.New("interest rate is not between 5% and 35%")
 	}
-	return map[string]string{
-		"interestRate": cols[6],
-	}, nil
+
+	// Get a map from the pool
+	result := vCtx.GetMap()
+	result["interestRate"] = cols[6]
+
+	return result, nil
 }
 
-func hasValidTerm(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+func hasValidTerm(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	// First trim spaces from the original string
 	termStr := utils.TrimIfNeeded(cols[5])
 
@@ -92,12 +98,15 @@ func hasValidTerm(_ *validator.RowValidatorContext, cols []string) (map[string]s
 	if term < 12 || term > 72 {
 		return nil, errors.New("term is not between 12 and 72 months")
 	}
-	return map[string]string{
-		"term": strconv.Itoa(term),
-	}, nil
+
+	// Get a map from the pool
+	result := vCtx.GetMap()
+	result["term"] = strconv.Itoa(term)
+
+	return result, nil
 }
 
-func hasValidGradeSubgrade(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+func hasValidGradeSubgrade(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	// Grade is in column 8 (index 8, 0-based)
 	grade := utils.TrimIfNeeded(cols[8])
 
@@ -119,8 +128,10 @@ func hasValidGradeSubgrade(_ *validator.RowValidatorContext, cols []string) (map
 		return nil, errors.New("invalid grade for subgrade validation")
 	}
 
-	return map[string]string{
-		"grade":    grade,
-		"subgrade": subgrade,
-	}, nil
+	// Get a map from the pool
+	result := vCtx.GetMap()
+	result["grade"] = grade
+	result["subgrade"] = subgrade
+
+	return result, nil
 }

@@ -11,7 +11,7 @@ import (
 
 // Rule 5: Has Employment Info
 // Non-empty emp_title and emp_length is not null.
-func hasEmploymentInfo(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+func hasEmploymentInfo(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	empTitle := utils.TrimIfNeeded(cols[10])
 	empLength := utils.TrimIfNeeded(cols[11])
 
@@ -23,15 +23,17 @@ func hasEmploymentInfo(_ *validator.RowValidatorContext, cols []string) (map[str
 		return nil, errors.New("employment length is empty")
 	}
 
-	return map[string]string{
-		"empTitle":  empTitle,
-		"empLength": empLength,
-	}, nil
+	// Get a map from the pool
+	result := vCtx.GetMap()
+	result["empTitle"] = empTitle
+	result["empLength"] = empLength
+
+	return result, nil
 }
 
 // Rule 6: Low DTI and Home Ownership
 // dti < 20, home_ownership in [MORTGAGE, OWN], and annual_inc > 40,000.
-func hasLowDTIAndHomeOwnership(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+func hasLowDTIAndHomeOwnership(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	dtiStr := utils.TrimIfNeeded(cols[36])
 	homeOwnership := strings.ToUpper(utils.TrimIfNeeded(cols[12]))
 	annualIncStr := utils.TrimIfNeeded(cols[13])
@@ -58,16 +60,18 @@ func hasLowDTIAndHomeOwnership(_ *validator.RowValidatorContext, cols []string) 
 		return nil, errors.New("annual income is not greater than 40,000")
 	}
 
-	return map[string]string{
-		"dti":           dtiStr,
-		"homeOwnership": homeOwnership,
-		"annualInc":     annualIncStr,
-	}, nil
+	// Get a map from the pool
+	result := vCtx.GetMap()
+	result["dti"] = dtiStr
+	result["homeOwnership"] = homeOwnership
+	result["annualInc"] = annualIncStr
+
+	return result, nil
 }
 
 // Rule 7: Established Credit History
 // earliest_cr_line not null and is > 10 years ago.
-func hasEstablishedCreditHistory(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+func hasEstablishedCreditHistory(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	earliestCrLine := utils.TrimIfNeeded(cols[38])
 
 	if earliestCrLine == "" {
@@ -86,14 +90,16 @@ func hasEstablishedCreditHistory(_ *validator.RowValidatorContext, cols []string
 		return nil, errors.New("earliest credit line is not more than 10 years ago")
 	}
 
-	return map[string]string{
-		"earliestCrLine": earliestCrLine,
-	}, nil
+	// Get a map from the pool
+	result := vCtx.GetMap()
+	result["earliestCrLine"] = earliestCrLine
+
+	return result, nil
 }
 
 // Rule 8: Healthy FICO Score
 // fico_range_low >= 660 and fico_range_high <= 850.
-func hasHealthyFICOScore(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+func hasHealthyFICOScore(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	ficoRangeLowStr := utils.TrimIfNeeded(cols[39])
 	ficoRangeHighStr := utils.TrimIfNeeded(cols[40])
 
@@ -115,15 +121,17 @@ func hasHealthyFICOScore(_ *validator.RowValidatorContext, cols []string) (map[s
 		return nil, errors.New("FICO range high is greater than 850")
 	}
 
-	return map[string]string{
-		"ficoRangeLow":  ficoRangeLowStr,
-		"ficoRangeHigh": ficoRangeHighStr,
-	}, nil
+	// Get a map from the pool
+	result := vCtx.GetMap()
+	result["ficoRangeLow"] = ficoRangeLowStr
+	result["ficoRangeHigh"] = ficoRangeHighStr
+
+	return result, nil
 }
 
 // Rule 9: Has Sufficient Accounts
 // total_acc >= 5 and open_acc >= 2.
-func hasSufficientAccounts(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+func hasSufficientAccounts(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	totalAccStr := utils.TrimIfNeeded(cols[48])
 	openAccStr := utils.TrimIfNeeded(cols[44])
 
@@ -145,15 +153,17 @@ func hasSufficientAccounts(_ *validator.RowValidatorContext, cols []string) (map
 		return nil, errors.New("open accounts is less than 2")
 	}
 
-	return map[string]string{
-		"totalAcc": totalAccStr,
-		"openAcc":  openAccStr,
-	}, nil
+	// Get a map from the pool
+	result := vCtx.GetMap()
+	result["totalAcc"] = totalAccStr
+	result["openAcc"] = openAccStr
+
+	return result, nil
 }
 
 // Rule 10: Stable Employment
 // emp_length in [5 years, 6 years, 7 years, 8 years, 9 years, 10+ years].
-func hasStableEmployment(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+func hasStableEmployment(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	empLength := utils.TrimIfNeeded(cols[11])
 	validEmpLengths := map[string]bool{
 		"5 years":   true,
@@ -168,14 +178,16 @@ func hasStableEmployment(_ *validator.RowValidatorContext, cols []string) (map[s
 		return nil, errors.New("employment length is not stable (5-10+ years)")
 	}
 
-	return map[string]string{
-		"empLength": empLength,
-	}, nil
+	// Get a map from the pool
+	result := vCtx.GetMap()
+	result["empLength"] = empLength
+
+	return result, nil
 }
 
 // Rule 11: No Public Record or Bankruptcies
 // pub_rec == 0 and pub_rec_bankruptcies == 0 and tax_liens == 0.
-func hasNoPublicRecordOrBankruptcies(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+func hasNoPublicRecordOrBankruptcies(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	pubRecStr := utils.TrimIfNeeded(cols[45])
 	pubRecBankruptciesStr := utils.TrimIfNeeded(cols[121])
 	taxLiensStr := utils.TrimIfNeeded(cols[122])
@@ -207,16 +219,18 @@ func hasNoPublicRecordOrBankruptcies(_ *validator.RowValidatorContext, cols []st
 		return nil, errors.New("tax liens is not zero")
 	}
 
-	return map[string]string{
-		"pubRec":             pubRecStr,
-		"pubRecBankruptcies": pubRecBankruptciesStr,
-		"taxLiens":           taxLiensStr,
-	}, nil
+	// Get a map from the pool
+	result := vCtx.GetMap()
+	result["pubRec"] = pubRecStr
+	result["pubRecBankruptcies"] = pubRecBankruptciesStr
+	result["taxLiens"] = taxLiensStr
+
+	return result, nil
 }
 
 // Rule 12: Verified with Income
 // verification_status in [Source Verified, Verified] and annual_inc > 30,000.
-func isVerifiedWithIncome(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
+func isVerifiedWithIncome(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	verificationStatus := utils.TrimIfNeeded(cols[14])
 	annualIncStr := utils.TrimIfNeeded(cols[13])
 
@@ -238,8 +252,10 @@ func isVerifiedWithIncome(_ *validator.RowValidatorContext, cols []string) (map[
 		return nil, errors.New("annual income is not greater than 30,000")
 	}
 
-	return map[string]string{
-		"verificationStatus": verificationStatus,
-		"annualInc":          annualIncStr,
-	}, nil
+	// Get a map from the pool
+	result := vCtx.GetMap()
+	result["verificationStatus"] = verificationStatus
+	result["annualInc"] = annualIncStr
+
+	return result, nil
 }
