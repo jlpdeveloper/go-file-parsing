@@ -2,6 +2,7 @@ package loan_info
 
 import (
 	"errors"
+	"go-file-parsing/utils"
 	"go-file-parsing/validator"
 	"regexp"
 	"strconv"
@@ -55,7 +56,7 @@ func hasValidInterestRate(_ *validator.RowValidatorContext, cols []string) (map[
 
 func hasValidTerm(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	// First trim spaces from the original string
-	termStr := strings.TrimSpace(cols[5])
+	termStr := utils.TrimIfNeeded(cols[5])
 
 	// Remove the " months" suffix, handling case where there might be spaces
 	// Use strings.HasSuffix to check if the string ends with " months"
@@ -68,7 +69,7 @@ func hasValidTerm(_ *validator.RowValidatorContext, cols []string) (map[string]s
 	}
 
 	// Trim spaces again
-	termStr = strings.TrimSpace(termStr)
+	termStr = utils.TrimIfNeeded(termStr)
 	term, err := strconv.Atoi(termStr)
 
 	if err != nil {
@@ -84,10 +85,10 @@ func hasValidTerm(_ *validator.RowValidatorContext, cols []string) (map[string]s
 
 func hasValidGradeSubgrade(_ *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	// Grade is in column 8 (index 8, 0-based)
-	grade := strings.TrimSpace(cols[8])
+	grade := utils.TrimIfNeeded(cols[8])
 
 	// Subgrade is in column 9 (index 9, 0-based)
-	subgrade := strings.TrimSpace(cols[9])
+	subgrade := utils.TrimIfNeeded(cols[9])
 
 	// Check if grade is a single letter from A to G
 	if !regexp.MustCompile(`^[A-G]$`).MatchString(grade) {

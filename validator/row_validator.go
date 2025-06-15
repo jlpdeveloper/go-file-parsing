@@ -21,7 +21,7 @@ func (c *CsvRowValidator) Validate(row string) (string, error) {
 	cacheChan := make(chan map[string]string, 100)
 	defer close(cacheChan)
 	//Split the columns, then set the first value to the raw data string (for debug purposes)
-	cols := strings.Split(row, c.config.Delimiter)
+	cols := PreprocessColumns(strings.Split(row, c.config.Delimiter))
 	//Spin off a new goroutine that will write to the cache as it processes from the channel
 	go func() {
 		for data := range cacheChan {
