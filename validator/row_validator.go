@@ -38,7 +38,7 @@ func (c *CsvRowValidator) Validate(row string) (string, error) {
 
 	vCtx := RowValidatorContext{
 		Config: c.config,
-		GetMap: GetMap,
+		GetMap: getMap,
 	}
 	var g errgroup.Group
 

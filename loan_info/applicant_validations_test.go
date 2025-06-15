@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+func mockGetMap() map[string]string {
+	return make(map[string]string)
+}
+
 func TestHasEmploymentInfo(t *testing.T) {
 	testCases := []struct {
 		name    string
@@ -43,7 +47,7 @@ func TestHasEmploymentInfo(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
-				GetMap: validator.GetMap,
+				GetMap: mockGetMap,
 			}
 
 			result, err := hasEmploymentInfo(ctx, tc.cols)
@@ -125,7 +129,7 @@ func TestHasLowDTIAndHomeOwnership(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
-				GetMap: validator.GetMap,
+				GetMap: mockGetMap,
 			}
 
 			result, err := hasLowDTIAndHomeOwnership(ctx, tc.cols)
@@ -203,7 +207,7 @@ func TestHasEstablishedCreditHistory(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
-				GetMap: validator.GetMap,
+				GetMap: mockGetMap,
 			}
 
 			result, err := hasEstablishedCreditHistory(ctx, tc.cols)
@@ -276,7 +280,7 @@ func TestHasHealthyFICOScore(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
-				GetMap: validator.GetMap,
+				GetMap: mockGetMap,
 			}
 
 			result, err := hasHealthyFICOScore(ctx, tc.cols)
@@ -352,7 +356,7 @@ func TestHasSufficientAccounts(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
-				GetMap: validator.GetMap,
+				GetMap: mockGetMap,
 			}
 
 			result, err := hasSufficientAccounts(ctx, tc.cols)
@@ -447,7 +451,7 @@ func TestHasStableEmployment(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
-				GetMap: validator.GetMap,
+				GetMap: mockGetMap,
 			}
 
 			result, err := hasStableEmployment(ctx, tc.cols)
@@ -532,7 +536,7 @@ func TestHasNoPublicRecordOrBankruptcies(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
-				GetMap: validator.GetMap,
+				GetMap: mockGetMap,
 			}
 
 			result, err := hasNoPublicRecordOrBankruptcies(ctx, tc.cols)
@@ -616,7 +620,7 @@ func TestIsVerifiedWithIncome(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := &validator.RowValidatorContext{
 				Config: &config.ParserConfig{},
-				GetMap: validator.GetMap,
+				GetMap: mockGetMap,
 			}
 
 			result, err := isVerifiedWithIncome(ctx, tc.cols)

@@ -10,7 +10,7 @@ var MapPool = &sync.Pool{
 }
 
 // GetMap retrieves a map from the pool or creates a new one if none is available
-func GetMap() map[string]string {
+func getMap() map[string]string {
 	return MapPool.Get().(map[string]string)
 }
 
