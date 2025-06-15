@@ -58,6 +58,9 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 	errChan := make(chan validator.RowError, 100)
 	var rowCount int64 = 0
 	scanner := bufio.NewScanner(file)
+	const maxScannerBufferSize = 1024 * 1024 // 1MB buffer
+	buf := make([]byte, maxScannerBufferSize)
+	scanner.Buffer(buf, maxScannerBufferSize)
 	wg := &sync.WaitGroup{}
 	for scanner.Scan() {
 		currentRow := rowCount
