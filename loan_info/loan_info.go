@@ -24,9 +24,10 @@ var validators = []validator.ColValidator{
 }
 
 func NewRowValidatorPool(conf *config.ParserConfig, cache cache.DistributedCache, poolSize int) chan validator.CsvRowValidator {
+	cacheChan := validator.NewCacheChannel(cache)
 	pool := make(chan validator.CsvRowValidator, poolSize)
 	for i := 0; i < poolSize; i++ {
-		pool <- validator.New(conf, cache, validators)
+		pool <- validator.New(conf, cacheChan, validators)
 	}
 	return pool
 }

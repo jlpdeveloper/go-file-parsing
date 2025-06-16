@@ -82,11 +82,10 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 			}
 			pool <- rowVal
 		}(scanner.Text(), currentRow)
-
-		log.Printf("Processed %d rows\n", currentRow)
-
+		if currentRow%1000 == 0 {
+			log.Printf("Processed %d rows\n", currentRow)
+		}
 		rowCount++
-		// Missing error check after the loop
 		if err := scanner.Err(); err != nil {
 			log.Fatalf("Error scanning file: %v", err)
 		}
