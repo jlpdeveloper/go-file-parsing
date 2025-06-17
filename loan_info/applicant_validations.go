@@ -5,6 +5,7 @@ import (
 	"go-file-parsing/validator"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -15,7 +16,7 @@ const (
 	colHomeOwnership      = 12
 	colAnnualInc          = 13
 	colVerificationStatus = 14
-	colDTI                = 36
+	colDTI                = 24
 	colEarliestCrLine     = 38
 	colFICORangeLow       = 39
 	colFICORangeHigh      = 40
@@ -25,6 +26,18 @@ const (
 	colPubRecBankruptcies = 121
 	colTaxLiens           = 122
 )
+
+var intPool = &sync.Pool{
+	New: func() interface{} {
+		return new(int)
+	},
+}
+
+var strPool = &sync.Pool{
+	New: func() interface{} {
+		return new(string)
+	},
+}
 
 // Rule 5: Has Employment Info
 // Non-empty emp_title and emp_length is not null.
@@ -51,38 +64,35 @@ func hasEmploymentInfo(vCtx *validator.RowValidatorContext, cols []string) (map[
 // Rule 6: Low DTI and Home Ownership
 // dti < 20, home_ownership in [MORTGAGE, OWN], and annual_inc > 40,000.
 func hasLowDTIAndHomeOwnership(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
-	dtiStr := utils.TrimIfNeeded(cols[colDTI])
-	homeOwnership := strings.ToUpper(utils.TrimIfNeeded(cols[colHomeOwnership]))
-	annualIncStr := utils.TrimIfNeeded(cols[colAnnualInc])
-
-	dti, err := strconv.ParseFloat(dtiStr, 64)
+	workStr := strPool.Get().(*string)
+	*workStr = utils.TrimIfNeeded(cols[colDTI])
+	workInt := intPool.Get().(*int)
+	var err error
+	*workInt, err = strconv.Atoi(strings.Split(*workStr, ".")[0])
 	if err != nil {
 		return nil, ErrDTINotNumber
 	}
 
-	if dti >= 20 {
+	if *workInt >= 30 {
 		return nil, ErrDTITooHigh
 	}
-
-	if homeOwnership != "MORTGAGE" && homeOwnership != "OWN" {
-		return nil, ErrHomeOwnershipInvalid
-	}
-
-	annualInc, err := strconv.ParseFloat(annualIncStr, 64)
+	// Get a map from the pool
+	result := vCtx.GetMap()
+	result["dti"] = *workStr
+	*workStr = utils.TrimIfNeeded(cols[colAnnualInc])
+	utils.TrimTrailingDecimal(workStr)
+	*workInt, err = strconv.Atoi(*workStr)
 	if err != nil {
 		return nil, ErrAnnualIncNotNumber
 	}
 
-	if annualInc <= 40000 {
+	if *workInt <= 30000 {
 		return nil, ErrAnnualIncTooLow40K
 	}
 
-	// Get a map from the pool
-	result := vCtx.GetMap()
-	result["dti"] = dtiStr
-	result["homeOwnership"] = homeOwnership
-	result["annualInc"] = annualIncStr
-
+	result["annualInc"] = *workStr
+	intPool.Put(workInt)
+	strPool.Put(workStr)
 	return result, nil
 }
 

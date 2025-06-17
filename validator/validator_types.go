@@ -36,16 +36,28 @@ func New(conf *config.ParserConfig, cacheChan chan CacheData, colValidators []Co
 }
 
 func NewCacheChannel(cache cache.DistributedCache) chan CacheData {
-	cacheChan := make(chan CacheData, 1000)
 	ctx := context.Background()
-	//Spin off a new goroutine that will write to the cache as it processes from the channel
-	go func() {
-		for cacheItem := range cacheChan {
+	cacheChan := make(chan CacheData, 1000)
+	cachePoolSize := 100
+	cachePool := make(chan func(data CacheData), cachePoolSize)
+	for i := 0; i < cachePoolSize; i++ {
+		cachePool <- func(cacheItem CacheData) {
 			for key, value := range cacheItem.Data {
 				_ = cache.SetField(ctx, cacheItem.Id, key, value)
 			}
 			// Return the map to the pool after use
 			PutMap(cacheItem.Data)
+		}
+	}
+
+	//Spin off a new goroutine that will write to the cache as it processes from the channel
+	go func() {
+		for cacheItem := range cacheChan {
+			worker := <-cachePool
+			go func(ci CacheData) {
+				worker(ci)
+				cachePool <- worker
+			}(cacheItem)
 		}
 	}()
 	return cacheChan

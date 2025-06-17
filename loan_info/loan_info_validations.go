@@ -22,22 +22,41 @@ var (
 	}
 )
 
+const (
+	colLoanAmount    = 2
+	colFundingAmount = 3
+	colFundingInvAmt = 4
+	colInterestRate  = 6
+	colTerm          = 5
+	colGrade         = 8
+	colSubgrade      = 9
+)
+
+func convertAmtToInt(amt string) (int, error) {
+	tmpStr := utils.TrimIfNeeded(amt)
+	if strings.HasSuffix(tmpStr, ".0") {
+		tmpStr = tmpStr[:len(tmpStr)-2]
+	}
+	return strconv.Atoi(tmpStr)
+}
+
 func hasValidLoanAmount(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
-	loanAmount, err := strconv.Atoi(cols[2])
+
+	loanAmount, err := convertAmtToInt(cols[colLoanAmount])
 	if err != nil {
 		return nil, ErrLoanAmountNotNumber
 	}
 	if loanAmount <= 0 {
 		return nil, ErrLoanAmountNotPositive
 	}
-	fundingAmount, err := strconv.Atoi(cols[3])
+	fundingAmount, err := convertAmtToInt(cols[colFundingAmount])
 	if err != nil {
 		return nil, ErrFundingAmountNotNumber
 	}
 	if fundingAmount <= 0 {
 		return nil, ErrFundingAmountNotPositive
 	}
-	fundingInvAmt, err := strconv.Atoi(cols[4])
+	fundingInvAmt, err := convertAmtToInt(cols[colFundingInvAmt])
 	if err != nil {
 		return nil, ErrFundingInvAmtNotNumber
 	}
@@ -50,9 +69,9 @@ func hasValidLoanAmount(vCtx *validator.RowValidatorContext, cols []string) (map
 
 	// Get a map from the pool
 	result := vCtx.GetMap()
-	result["loanAmount"] = cols[2]
-	result["fundingAmount"] = cols[3]
-	result["fundingInvAmt"] = cols[4]
+	result["loanAmount"] = cols[colLoanAmount]
+	result["fundingAmount"] = cols[colFundingAmount]
+	result["fundingInvAmt"] = cols[colFundingInvAmt]
 
 	return result, nil
 }

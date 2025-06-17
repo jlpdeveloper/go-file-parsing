@@ -2,7 +2,7 @@ package main
 
 import (
 	"bufio"
-	"context"
+	"fmt"
 	"go-file-parsing/cache"
 	"go-file-parsing/config"
 	"go-file-parsing/loan_info"
@@ -43,7 +43,7 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 		panic(err)
 	}
 	// Create a pool of validators
-	pool := loan_info.NewRowValidatorPool(&conf, cacheClient, 100)
+	pool := loan_info.NewRowValidatorPool(&conf, cacheClient, 500)
 	// Create a channel to receive errors
 	errChan := make(chan validator.RowError, 100)
 	var rowCount int64 = 0
@@ -82,7 +82,7 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 			}
 			pool <- rowVal
 		}(scanner.Text(), currentRow)
-		if currentRow%1000 == 0 {
+		if currentRow%10000 == 0 {
 			log.Printf("Processed %d rows\n", currentRow)
 		}
 		rowCount++
@@ -95,10 +95,11 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 	log.Println("CSV parsing complete.")
 	close(errChan)
 	errorWg.Wait()
-	for _, err := range errors {
-		//Cleanup all the bad data
-		_ = cacheClient.Delete(context.Background(), err.Id)
-		//log.Println(fmt.Sprintf("error on line: %d, error: %s", err.Row, err.Error.Error()))
-	}
+	log.Println(fmt.Sprintf("Error Size:%d", len(errors)))
+	//for _, err := range errors {
+	//	//Cleanup all the bad data
+	//	_ = cacheClient.Delete(context.Background(), err.Id)
+	//	//log.Println(fmt.Sprintf("error on line: %d, error: %s", err.Row, err.Error.Error()))
+	//}
 
 }

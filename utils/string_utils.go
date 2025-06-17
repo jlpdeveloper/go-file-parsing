@@ -22,3 +22,12 @@ func TrimIfNeeded(s string) string {
 
 	return s
 }
+
+func TrimTrailingDecimal(s *string) {
+	b := []byte(*s)
+	if len(b) > 2 && b[len(b)-2] == '.' && b[len(b)-1] == '0' {
+		b = b[:len(b)-2] // "truncate" the last two bytes
+	}
+	// Only convert to string now, if needed
+	*s = string(b)
+}
