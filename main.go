@@ -9,6 +9,7 @@ import (
 	"go-file-parsing/validator"
 	"log"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -44,6 +45,9 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 	}
 	// Create a pool of validators
 	pool := loan_info.NewRowValidatorPool(&conf, cacheClient, 500)
+	// Ensure validators are closed when function exits
+	defer loan_info.CloseValidatorPool(pool)
+
 	// Create a channel to receive errors
 	errChan := make(chan validator.RowError, 100)
 	var rowCount int64 = 0
@@ -84,6 +88,13 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 		}(scanner.Text(), currentRow)
 		if currentRow%10000 == 0 {
 			log.Printf("Processed %d rows\n", currentRow)
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+			fmt.Printf("Alloc = %v MiB", m.Alloc/1024/1024)
+			fmt.Printf("\tTotalAlloc = %v MiB", m.TotalAlloc/1024/1024)
+			fmt.Printf("\tSys = %v MiB", m.Sys/1024/1024)
+			fmt.Printf("\tNumGC = %v\n", m.NumGC)
+
 		}
 		rowCount++
 		if err := scanner.Err(); err != nil {

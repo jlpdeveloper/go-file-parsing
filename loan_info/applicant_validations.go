@@ -17,7 +17,7 @@ const (
 	colAnnualInc          = 13
 	colVerificationStatus = 14
 	colDTI                = 24
-	colEarliestCrLine     = 38
+	colEarliestCrLine     = 26
 	colFICORangeLow       = 39
 	colFICORangeHigh      = 40
 	colOpenAcc            = 44
@@ -26,6 +26,8 @@ const (
 	colPubRecBankruptcies = 121
 	colTaxLiens           = 122
 )
+
+var tenYearsAgo = time.Now().AddDate(-10, 0, 0)
 
 var intPool = &sync.Pool{
 	New: func() interface{} {
@@ -36,6 +38,12 @@ var intPool = &sync.Pool{
 var strPool = &sync.Pool{
 	New: func() interface{} {
 		return new(string)
+	},
+}
+
+var timePool = &sync.Pool{
+	New: func() interface{} {
+		return new(time.Time)
 	},
 }
 
@@ -55,6 +63,11 @@ func hasEmploymentInfo(vCtx *validator.RowValidatorContext, cols []string) (map[
 
 	// Get a map from the pool
 	result := vCtx.GetMap()
+	defer func() {
+		if recover() != nil {
+			validator.PutMap(result)
+		}
+	}()
 	result["empTitle"] = empTitle
 	result["empLength"] = empLength
 
@@ -67,6 +80,16 @@ func hasLowDTIAndHomeOwnership(vCtx *validator.RowValidatorContext, cols []strin
 	workStr := strPool.Get().(*string)
 	*workStr = utils.TrimIfNeeded(cols[colDTI])
 	workInt := intPool.Get().(*int)
+	var result map[string]string
+	defer func() {
+		intPool.Put(workInt)
+		strPool.Put(workStr)
+		// If we're returning an error, return the map to the pool
+		if result != nil && recover() != nil {
+			validator.PutMap(result)
+			result = nil
+		}
+	}()
 	var err error
 	*workInt, err = strconv.Atoi(strings.Split(*workStr, ".")[0])
 	if err != nil {
@@ -77,49 +100,59 @@ func hasLowDTIAndHomeOwnership(vCtx *validator.RowValidatorContext, cols []strin
 		return nil, ErrDTITooHigh
 	}
 	// Get a map from the pool
-	result := vCtx.GetMap()
+	result = vCtx.GetMap()
 	result["dti"] = *workStr
 	*workStr = utils.TrimIfNeeded(cols[colAnnualInc])
 	utils.TrimTrailingDecimal(workStr)
 	*workInt, err = strconv.Atoi(*workStr)
 	if err != nil {
+		validator.PutMap(result)
 		return nil, ErrAnnualIncNotNumber
 	}
 
 	if *workInt <= 30000 {
+		validator.PutMap(result)
 		return nil, ErrAnnualIncTooLow40K
 	}
 
 	result["annualInc"] = *workStr
-	intPool.Put(workInt)
-	strPool.Put(workStr)
+
 	return result, nil
 }
 
 // Rule 7: Established Credit History
 // earliest_cr_line not null and is > 10 years ago.
 func hasEstablishedCreditHistory(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
-	earliestCrLine := utils.TrimIfNeeded(cols[colEarliestCrLine])
+	workStr := strPool.Get().(*string)
+	*workStr = utils.TrimIfNeeded(cols[colEarliestCrLine])
 
-	if earliestCrLine == "" {
+	if *workStr == "" {
+		strPool.Put(workStr)
 		return nil, ErrEarliestCrLineEmpty
 	}
+	workTime := timePool.Get().(*time.Time)
+	var result map[string]string
+	var err error
+	defer func() {
+		strPool.Put(workStr)
+		timePool.Put(workTime)
+
+	}()
 
 	// Parse the date in format YYYY-MM
-	crDate, err := time.Parse("2006-01", earliestCrLine)
+	*workTime, err = time.Parse("Jan-2006", *workStr)
 	if err != nil {
 		return nil, ErrEarliestCrLineFormat
 	}
 
 	// Check if the date is more than 10 years ago
-	tenYearsAgo := time.Now().AddDate(-10, 0, 0)
-	if crDate.After(tenYearsAgo) {
+	if workTime.After(tenYearsAgo) {
 		return nil, ErrEarliestCrLineTooRecent
 	}
 
-	// Get a map from the pool
-	result := vCtx.GetMap()
-	result["earliestCrLine"] = earliestCrLine
+	// Create a copy of the map to return
+	result = vCtx.GetMap()
+	result["earliestCrLine"] = *workStr
 
 	return result, nil
 }
@@ -150,6 +183,11 @@ func hasHealthyFICOScore(vCtx *validator.RowValidatorContext, cols []string) (ma
 
 	// Get a map from the pool
 	result := vCtx.GetMap()
+	defer func() {
+		if recover() != nil {
+			validator.PutMap(result)
+		}
+	}()
 	result["ficoRangeLow"] = ficoRangeLowStr
 	result["ficoRangeHigh"] = ficoRangeHighStr
 
@@ -182,6 +220,11 @@ func hasSufficientAccounts(vCtx *validator.RowValidatorContext, cols []string) (
 
 	// Get a map from the pool
 	result := vCtx.GetMap()
+	defer func() {
+		if recover() != nil {
+			validator.PutMap(result)
+		}
+	}()
 	result["totalAcc"] = totalAccStr
 	result["openAcc"] = openAccStr
 
@@ -207,6 +250,11 @@ func hasStableEmployment(vCtx *validator.RowValidatorContext, cols []string) (ma
 
 	// Get a map from the pool
 	result := vCtx.GetMap()
+	defer func() {
+		if recover() != nil {
+			validator.PutMap(result)
+		}
+	}()
 	result["empLength"] = empLength
 
 	return result, nil
@@ -248,6 +296,11 @@ func hasNoPublicRecordOrBankruptcies(vCtx *validator.RowValidatorContext, cols [
 
 	// Get a map from the pool
 	result := vCtx.GetMap()
+	defer func() {
+		if recover() != nil {
+			validator.PutMap(result)
+		}
+	}()
 	result["pubRec"] = pubRecStr
 	result["pubRecBankruptcies"] = pubRecBankruptciesStr
 	result["taxLiens"] = taxLiensStr
@@ -281,6 +334,11 @@ func isVerifiedWithIncome(vCtx *validator.RowValidatorContext, cols []string) (m
 
 	// Get a map from the pool
 	result := vCtx.GetMap()
+	defer func() {
+		if recover() != nil {
+			validator.PutMap(result)
+		}
+	}()
 	result["verificationStatus"] = verificationStatus
 	result["annualInc"] = annualIncStr
 

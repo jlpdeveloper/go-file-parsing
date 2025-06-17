@@ -36,12 +36,13 @@ func TestValidate_ColumnCountValidation(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			cacheChan := make(chan validator.CacheData, 10)
 			v := validator.New(
 				&config.ParserConfig{
 					Delimiter:       ",",
 					ExpectedColumns: tc.expectedColumns,
 				},
-				&validator.MockCache{},
+				cacheChan,
 				[]validator.ColValidator{isValidSize})
 
 			id, err := v.Validate(tc.row)

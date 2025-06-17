@@ -12,14 +12,14 @@ var validators = []validator.ColValidator{
 	//hasValidInterestRate,
 	//hasValidTerm,
 	//hasEmploymentInfo,
-	hasLowDTIAndHomeOwnership,
-	//hasEstablishedCreditHistory,
+	hasEstablishedCreditHistory,
 	//hasHealthyFICOScore,
 	//hasSufficientAccounts,
 	//hasStableEmployment,
 	//hasNoPublicRecordOrBankruptcies,
 	//isVerifiedWithIncome,
 	//hasValidGradeSubgrade,
+	//hasLowDTIAndHomeOwnership,
 	//passExtraData,
 }
 
@@ -30,4 +30,13 @@ func NewRowValidatorPool(conf *config.ParserConfig, cache cache.DistributedCache
 		pool <- validator.New(conf, cacheChan, validators)
 	}
 	return pool
+}
+
+// CloseValidatorPool closes all validators in the pool to prevent resource leaks.
+// It should be called when the application exits.
+func CloseValidatorPool(pool chan validator.CsvRowValidator) {
+	close(pool)
+	for v := range pool {
+		v.Close()
+	}
 }

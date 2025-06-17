@@ -32,6 +32,7 @@ func New(conf *config.ParserConfig, cacheChan chan CacheData, colValidators []Co
 		config:        conf,
 		cacheChan:     cacheChan,
 		colValidators: colValidators,
+		closed:        false,
 	}
 }
 
@@ -55,8 +56,16 @@ func NewCacheChannel(cache cache.DistributedCache) chan CacheData {
 		for cacheItem := range cacheChan {
 			worker := <-cachePool
 			go func(ci CacheData) {
+				defer func() {
+					// Return the worker to the pool even if there's a panic
+					cachePool <- worker
+
+					// If there's a panic, recover and ensure the map is returned to the pool
+					if r := recover(); r != nil {
+						PutMap(ci.Data)
+					}
+				}()
 				worker(ci)
-				cachePool <- worker
 			}(cacheItem)
 		}
 	}()
