@@ -13,13 +13,12 @@ import (
 const (
 	colEmpTitle           = 10
 	colEmpLength          = 11
-	colHomeOwnership      = 12
 	colAnnualInc          = 13
 	colVerificationStatus = 14
 	colDTI                = 24
 	colEarliestCrLine     = 26
-	colFICORangeLow       = 39
-	colFICORangeHigh      = 40
+	colFICORangeLow       = 27
+	colFICORangeHigh      = 28
 	colOpenAcc            = 44
 	colPubRec             = 45
 	colTotalAcc           = 48
@@ -142,11 +141,13 @@ func hasEstablishedCreditHistory(vCtx *validator.RowValidatorContext, cols []str
 	// Parse the date in format YYYY-MM
 	*workTime, err = time.Parse("Jan-2006", *workStr)
 	if err != nil {
+		validator.PutMap(result)
 		return nil, ErrEarliestCrLineFormat
 	}
 
 	// Check if the date is more than 10 years ago
 	if workTime.After(tenYearsAgo) {
+		validator.PutMap(result)
 		return nil, ErrEarliestCrLineTooRecent
 	}
 
@@ -160,36 +161,43 @@ func hasEstablishedCreditHistory(vCtx *validator.RowValidatorContext, cols []str
 // Rule 8: Healthy FICO Score
 // fico_range_low >= 660 and fico_range_high <= 850.
 func hasHealthyFICOScore(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
-	ficoRangeLowStr := utils.TrimIfNeeded(cols[colFICORangeLow])
-	ficoRangeHighStr := utils.TrimIfNeeded(cols[colFICORangeHigh])
-
-	ficoRangeLow, err := strconv.Atoi(ficoRangeLowStr)
-	if err != nil {
-		return nil, ErrFICORangeLowNotNumber
-	}
-
-	ficoRangeHigh, err := strconv.Atoi(ficoRangeHighStr)
-	if err != nil {
-		return nil, ErrFICORangeHighNotNumber
-	}
-
-	if ficoRangeLow < 660 {
-		return nil, ErrFICORangeLowTooLow
-	}
-
-	if ficoRangeHigh > 850 {
-		return nil, ErrFICORangeHighTooHigh
-	}
-
+	workStr := strPool.Get().(*string)
+	*workStr = utils.TrimIfNeeded(cols[colFICORangeLow])
+	utils.TrimTrailingDecimal(workStr)
+	workInt := intPool.Get().(*int)
+	var err error
 	// Get a map from the pool
 	result := vCtx.GetMap()
 	defer func() {
-		if recover() != nil {
-			validator.PutMap(result)
-		}
+		strPool.Put(workStr)
+		intPool.Put(workInt)
+
 	}()
-	result["ficoRangeLow"] = ficoRangeLowStr
-	result["ficoRangeHigh"] = ficoRangeHighStr
+
+	*workInt, err = strconv.Atoi(*workStr)
+	if err != nil {
+		validator.PutMap(result)
+		return nil, ErrFICORangeLowNotNumber
+	}
+
+	if *workInt < 660 {
+		validator.PutMap(result)
+		return nil, ErrFICORangeLowTooLow
+	}
+	result["ficoRangeLow"] = *workStr
+
+	*workStr = utils.TrimIfNeeded(cols[colFICORangeHigh])
+	utils.TrimTrailingDecimal(workStr)
+	*workInt, err = strconv.Atoi(*workStr)
+	if err != nil {
+		validator.PutMap(result)
+		return nil, ErrFICORangeHighNotNumber
+	}
+	if *workInt > 850 {
+		validator.PutMap(result)
+		return nil, ErrFICORangeHighTooHigh
+	}
+	result["ficoRangeHigh"] = *workStr
 
 	return result, nil
 }
