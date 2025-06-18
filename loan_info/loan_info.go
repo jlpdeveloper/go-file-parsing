@@ -7,20 +7,18 @@ import (
 )
 
 var validators = []validator.ColValidator{
-	//isValidSize,
-	//hasValidLoanAmount,
-	//hasValidInterestRate,
-	//hasValidTerm,
-	//hasEmploymentInfo,
-	//hasEstablishedCreditHistory,
+	isValidSize,
+	hasValidLoanAmount,
+	hasValidInterestRate,
+	hasValidTerm,
+	hasEmploymentInfo,
+	hasEstablishedCreditHistory,
 	hasHealthyFICOScore,
-	//hasSufficientAccounts,
-	//hasStableEmployment,
-	//hasNoPublicRecordOrBankruptcies,
-	//isVerifiedWithIncome,
-	//hasValidGradeSubgrade,
-	//hasLowDTIAndHomeOwnership,
-	//passExtraData,
+	hasSufficientAccounts,
+	isVerifiedWithIncome,
+	hasValidGradeSubgrade,
+	hasLowDTI,
+	passExtraData,
 }
 
 func NewRowValidatorPool(conf *config.ParserConfig, cache cache.DistributedCache, poolSize int) chan validator.CsvRowValidator {

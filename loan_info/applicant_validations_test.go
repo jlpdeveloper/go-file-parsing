@@ -132,7 +132,7 @@ func TestHasLowDTIAndHomeOwnership(t *testing.T) {
 				GetMap: mockGetMap,
 			}
 
-			result, err := hasLowDTIAndHomeOwnership(ctx, tc.cols)
+			result, err := hasLowDTI(ctx, tc.cols)
 
 			// Check if error was expected
 			if tc.wantErr {

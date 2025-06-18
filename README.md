@@ -408,15 +408,8 @@ using ChatGPT to analyze the columns and give recommendations on rules to add co
 9. **Has Sufficient Accounts**
    - `total_acc` >= 5 and `open_acc` >= 2.
 
-10. **Stable Employment**
-    - `emp_length` in [5 years, 6 years, 7 years, 8 years, 9 years, 10+ years].
-
-11. **No Public Record or Bankruptcies**
-    - `pub_rec` == 0 and `pub_rec_bankruptcies` == 0 and `tax_liens` == 0.
-
-12. **Verified with Income**
-    - `verification_status` in [Source Verified, Verified] and `annual_inc` > 30,000.
-
+10. **Valid Income**
+    - `annual_inc` > 30,000.
 
 ## Additional Data to Store
 - `avg_cur_bal`

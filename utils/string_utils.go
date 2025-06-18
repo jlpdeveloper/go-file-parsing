@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -30,4 +31,9 @@ func TrimTrailingDecimal(s *string) {
 	}
 	// Only convert to string now, if needed
 	*s = string(b)
+}
+
+func FormattedStringToInt(s *string) (int, error) {
+	TrimTrailingDecimal(s)
+	return strconv.Atoi(*s)
 }
