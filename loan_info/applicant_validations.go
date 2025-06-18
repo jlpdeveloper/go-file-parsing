@@ -250,7 +250,7 @@ func hasSufficientAccounts(vCtx *validator.RowValidatorContext, cols []string) (
 	})
 	if err != nil {
 		validator.PutMap(result)
-		return nil, ErrOpenAccNotNumber
+		return nil, err
 	}
 
 	return result, nil
@@ -313,6 +313,11 @@ func hasNoPublicRecordOrBankruptcies(vCtx *validator.RowValidatorContext, cols [
 func isVerifiedWithIncome(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 	verificationStatus := utils.TrimIfNeeded(cols[colVerificationStatus])
 	annualIncStr := utils.TrimIfNeeded(cols[colAnnualInc])
+
+	// Check verification status
+	if verificationStatus != "Source Verified" && verificationStatus != "Verified" {
+		return nil, ErrVerificationStatusInvalid
+	}
 
 	// Get a map from the pool
 	result := vCtx.GetMap()

@@ -85,3 +85,8 @@ var (
 	ErrPubRecBankruptciesNotZero   = errors.New("public record bankruptcies is not zero")
 	ErrTaxLiensNotZero             = errors.New("tax liens is not zero")
 )
+
+// Verification status validation errors
+var (
+	ErrVerificationStatusInvalid = errors.New("verification status is not Source Verified or Verified")
+)
