@@ -111,6 +111,28 @@ func hasLowDTI(vCtx *validator.RowValidatorContext, cols []string) (map[string]s
 		return nil, err
 	}
 
+	// Check home ownership
+	homeOwnership := utils.TrimIfNeeded(cols[12])
+	if homeOwnership != "MORTGAGE" && homeOwnership != "OWN" {
+		validator.PutMap(result)
+		return nil, ErrHomeOwnershipInvalid
+	}
+	result["homeOwnership"] = homeOwnership
+
+	// Check annual income
+	*workStr = utils.TrimIfNeeded(cols[colAnnualInc])
+	err = validateFormattedInt(workStr, ErrAnnualIncNotNumber, func(i *int) error {
+		if *i <= 40000 {
+			return ErrAnnualIncTooLow40K
+		}
+		result["annualInc"] = *workStr
+		return nil
+	})
+	if err != nil {
+		validator.PutMap(result)
+		return nil, err
+	}
+
 	return result, nil
 }
 
@@ -134,7 +156,7 @@ func hasEstablishedCreditHistory(vCtx *validator.RowValidatorContext, cols []str
 	}()
 
 	// Parse the date in format YYYY-MM
-	*workTime, err = time.Parse("Jan-2006", *workStr)
+	*workTime, err = time.Parse("2006-01", *workStr)
 	if err != nil {
 		validator.PutMap(result)
 		return nil, ErrEarliestCrLineFormat
