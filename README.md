@@ -372,6 +372,8 @@ The data has the following columns:
 | settlement_amount            |                      |
 | settlement_percentage        |                      |
 | settlement_term              |                      |
+
+
 A sample file has been generated using ChatGPT.
 
 ## Rules
