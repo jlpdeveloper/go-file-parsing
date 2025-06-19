@@ -17,9 +17,10 @@ func TestValidate_StopsOnFirstError(t *testing.T) {
 	errorValidator := func(_ *RowValidatorContext, _ []string) (map[string]string, error) {
 		return nil, fmt.Errorf("bad column")
 	}
+	cacheChan := make(chan CacheData, 20)
 	v := CsvRowValidator{
-		config:      &config.ParserConfig{Delimiter: ","},
-		cacheClient: &MockCache{},
+		config:    &config.ParserConfig{Delimiter: ","},
+		cacheChan: cacheChan,
 		// Config as needed
 		colValidators: []ColValidator{
 			successValidator,
@@ -36,15 +37,17 @@ func TestValidate_StopsOnFirstError(t *testing.T) {
 	if id != "irrelevant" {
 		t.Errorf("expected ID to be 'irrelevant', got %s", id)
 	}
+	close(cacheChan)
 }
 
 func TestValidate_SuccessfulValidation(t *testing.T) {
+	cacheChan := make(chan CacheData, 20)
 	successValidator := func(_ *RowValidatorContext, _ []string) (map[string]string, error) {
 		return nil, nil
 	}
 	v := CsvRowValidator{
-		config:      &config.ParserConfig{Delimiter: ","},
-		cacheClient: &MockCache{},
+		config:    &config.ParserConfig{Delimiter: ","},
+		cacheChan: cacheChan,
 		colValidators: []ColValidator{
 			successValidator,
 			successValidator,
@@ -60,6 +63,7 @@ func TestValidate_SuccessfulValidation(t *testing.T) {
 	if id != "valid" {
 		t.Errorf("expected ID to be 'valid', got %s", id)
 	}
+	close(cacheChan)
 }
 
 func TestValidate_ConcurrentValidation(t *testing.T) {
@@ -80,10 +84,10 @@ func TestValidate_ConcurrentValidation(t *testing.T) {
 			return nil, nil
 		}
 	}
-
+	cacheChan := make(chan CacheData, 20)
 	v := CsvRowValidator{
 		config:        &config.ParserConfig{Delimiter: ","},
-		cacheClient:   &MockCache{},
+		cacheChan:     cacheChan,
 		colValidators: validators,
 	}
 
@@ -107,6 +111,7 @@ func TestValidate_ConcurrentValidation(t *testing.T) {
 			t.Errorf("validator %d was not called", i)
 		}
 	}
+	close(cacheChan)
 }
 
 func TestValidate_EmptyRow(t *testing.T) {
@@ -121,10 +126,11 @@ func TestValidate_EmptyRow(t *testing.T) {
 		}
 		return nil, nil
 	}
-
+	cacheChan := make(chan CacheData, 20)
+	defer close(cacheChan)
 	v := CsvRowValidator{
 		config:        &config.ParserConfig{Delimiter: ","},
-		cacheClient:   &MockCache{},
+		cacheChan:     cacheChan,
 		colValidators: []ColValidator{validator},
 	}
 
@@ -190,12 +196,14 @@ func TestValidate_DifferentDelimiter(t *testing.T) {
 			wantErr:   true, // Will have 1 column instead of 3
 		},
 	}
-
+	cacheChan := make(chan CacheData, 20)
+	defer close(cacheChan)
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+
 			v := CsvRowValidator{
 				config:        &config.ParserConfig{Delimiter: tc.delimiter},
-				cacheClient:   &MockCache{},
+				cacheChan:     cacheChan,
 				colValidators: []ColValidator{validator},
 			}
 
@@ -317,7 +325,8 @@ func TestValidate_MultipleValidators(t *testing.T) {
 			wantErr: true,
 		},
 	}
-
+	cacheChan := make(chan CacheData, 20)
+	defer close(cacheChan)
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Reset validation results
@@ -327,7 +336,7 @@ func TestValidate_MultipleValidators(t *testing.T) {
 
 			v := CsvRowValidator{
 				config:        &config.ParserConfig{Delimiter: ","},
-				cacheClient:   &MockCache{},
+				cacheChan:     cacheChan,
 				colValidators: validators,
 			}
 
