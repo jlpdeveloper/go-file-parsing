@@ -37,10 +37,9 @@ func New(conf *config.ParserConfig, cacheChan chan CacheData, colValidators []Co
 	}
 }
 
-func NewCacheChannel(cache cache.DistributedCache, wg *sync.WaitGroup) chan CacheData {
+func NewCacheChannel(cache cache.DistributedCache, wg *sync.WaitGroup, cachePoolSize int) chan CacheData {
 	ctx := context.Background()
-	cacheChan := make(chan CacheData, 1000)
-	cachePoolSize := 1000
+	cacheChan := make(chan CacheData, cachePoolSize)
 	cachePool := make(chan func(data CacheData), cachePoolSize)
 	for i := 0; i < cachePoolSize; i++ {
 		cachePool <- func(cacheItem CacheData) {
