@@ -4,6 +4,7 @@ import (
 	"context"
 	"go-file-parsing/cache"
 	"go-file-parsing/config"
+	"sync"
 )
 
 type RowError struct {
@@ -36,7 +37,7 @@ func New(conf *config.ParserConfig, cacheChan chan CacheData, colValidators []Co
 	}
 }
 
-func NewCacheChannel(cache cache.DistributedCache) chan CacheData {
+func NewCacheChannel(cache cache.DistributedCache, wg *sync.WaitGroup) chan CacheData {
 	ctx := context.Background()
 	cacheChan := make(chan CacheData, 1000)
 	cachePoolSize := 100
@@ -50,9 +51,10 @@ func NewCacheChannel(cache cache.DistributedCache) chan CacheData {
 			PutMap(cacheItem.Data)
 		}
 	}
-
+	wg.Add(1)
 	//Spin off a new goroutine that will write to the cache as it processes from the channel
 	go func() {
+		defer wg.Done()
 		for cacheItem := range cacheChan {
 			worker := <-cachePool
 			go func(ci CacheData) {

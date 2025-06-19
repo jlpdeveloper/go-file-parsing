@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"go-file-parsing/cache"
 	"go-file-parsing/config"
@@ -28,6 +29,28 @@ func main() {
 	log.Printf("Time elapsed: %s", end.Sub(start))
 }
 
+func NewErrChan(cache cache.DistributedCache, size int, wg *sync.WaitGroup) chan validator.RowError {
+	errChan := make(chan validator.RowError, size)
+	errWorkerPool := make(chan func(validator.RowError), size)
+	for i := 0; i < size; i++ {
+		errWorkerPool <- func(err validator.RowError) {
+			_ = cache.Set(context.Background(), fmt.Sprintf("err:row%s:id%s", err.Row, err.Id), err.Error.Error())
+		}
+	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for err := range errChan {
+			worker := <-errWorkerPool
+			go func(e validator.RowError) {
+				worker(e)
+				errWorkerPool <- worker
+			}(err)
+		}
+	}()
+	return errChan
+}
+
 func parseFile(filename string, cacheClient cache.DistributedCache) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -43,24 +66,17 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 	if err != nil {
 		panic(err)
 	}
+	chanWg := &sync.WaitGroup{}
+	cacheChan := validator.NewCacheChannel(cacheClient, chanWg)
 	// Create a pool of validators
-	pool := loan_info.NewRowValidatorPool(&conf, cacheClient, 500)
+	pool := loan_info.NewRowValidatorPool(&conf, cacheChan, 500)
 	// Ensure validators are closed when function exits
 	defer loan_info.CloseValidatorPool(pool)
 
 	// Create a channel to receive errors
-	errChan := make(chan validator.RowError, 100)
+	errChan := NewErrChan(cacheClient, 100, chanWg)
 	var rowCount int64 = 0
 	scanner := bufio.NewScanner(file)
-	var errors []validator.RowError
-	errorWg := &sync.WaitGroup{}
-	errorWg.Add(1)
-	go func() {
-		defer errorWg.Done()
-		for err := range errChan {
-			errors = append(errors, err)
-		}
-	}()
 	const maxScannerBufferSize = 1024 * 1024 // 1MB buffer
 	buf := make([]byte, maxScannerBufferSize)
 	scanner.Buffer(buf, maxScannerBufferSize)
@@ -77,7 +93,6 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 			defer wg.Done()
 			id, rowErr := rowVal.Validate(row)
 			if rowErr != nil {
-				//log.Println(rowErr.Error())
 				errChan <- validator.RowError{
 					Row:   rowNum,
 					Id:    id,
@@ -105,12 +120,7 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 	wg.Wait()
 	log.Println("CSV parsing complete.")
 	close(errChan)
-	errorWg.Wait()
-	log.Println(fmt.Sprintf("Error Size:%d", len(errors)))
-	//for _, err := range errors {
-	//	//Cleanup all the bad data
-	//	_ = cacheClient.Delete(context.Background(), err.Id)
-	//	//log.Println(fmt.Sprintf("error on line: %d, error: %s", err.Row, err.Error.Error()))
-	//}
-
+	close(cacheChan)
+	chanWg.Wait()
+	log.Println("Finished writing to cache.")
 }

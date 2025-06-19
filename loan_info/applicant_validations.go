@@ -103,13 +103,13 @@ func hasLowDTI(vCtx *validator.RowValidatorContext, cols []string) (map[string]s
 		if *i >= 20 {
 			return ErrDTITooHigh
 		}
-		result["dti"] = *workStr
 		return nil
 	})
 	if err != nil {
 		validator.PutMap(result)
 		return nil, err
 	}
+	result["dti"] = *workStr
 
 	// Check home ownership
 	homeOwnership := utils.TrimIfNeeded(cols[12])
@@ -125,13 +125,13 @@ func hasLowDTI(vCtx *validator.RowValidatorContext, cols []string) (map[string]s
 		if *i <= 40000 {
 			return ErrAnnualIncTooLow40K
 		}
-		result["annualInc"] = *workStr
 		return nil
 	})
 	if err != nil {
 		validator.PutMap(result)
 		return nil, err
 	}
+	result["annualInc"] = *workStr
 
 	return result, nil
 }
@@ -147,7 +147,7 @@ func hasEstablishedCreditHistory(vCtx *validator.RowValidatorContext, cols []str
 		return nil, ErrEarliestCrLineEmpty
 	}
 	workTime := timePool.Get().(*time.Time)
-	var result map[string]string
+	result := vCtx.GetMap()
 	var err error
 	defer func() {
 		strPool.Put(workStr)
@@ -167,9 +167,6 @@ func hasEstablishedCreditHistory(vCtx *validator.RowValidatorContext, cols []str
 		validator.PutMap(result)
 		return nil, ErrEarliestCrLineTooRecent
 	}
-
-	// Create a copy of the map to return
-	result = vCtx.GetMap()
 	result["earliestCrLine"] = *workStr
 
 	return result, nil
@@ -193,13 +190,13 @@ func hasHealthyFICOScore(vCtx *validator.RowValidatorContext, cols []string) (ma
 		if *i < 660 {
 			return ErrFICORangeLowTooLow
 		}
-		result["ficoRangeLow"] = *workStr
 		return nil
 	})
 	if err != nil {
 		validator.PutMap(result)
 		return nil, err
 	}
+	result["ficoRangeLow"] = *workStr
 
 	*workStr = utils.TrimIfNeeded(cols[colFICORangeHigh])
 	utils.TrimTrailingDecimal(workStr)
@@ -207,13 +204,13 @@ func hasHealthyFICOScore(vCtx *validator.RowValidatorContext, cols []string) (ma
 		if *i > 850 {
 			return ErrFICORangeHighTooHigh
 		}
-		result["ficoRangeHigh"] = *workStr
 		return nil
 	})
 	if err != nil {
 		validator.PutMap(result)
 		return nil, err
 	}
+	result["ficoRangeHigh"] = *workStr
 
 	return result, nil
 }
@@ -232,26 +229,27 @@ func hasSufficientAccounts(vCtx *validator.RowValidatorContext, cols []string) (
 		if *i < 5 {
 			return ErrTotalAccTooFew
 		}
-		result["totalAcc"] = *workStr
+
 		return nil
 	})
 	if err != nil {
 		validator.PutMap(result)
 		return nil, err
 	}
+	result["totalAcc"] = *workStr
 
 	*workStr = utils.TrimIfNeeded(cols[colOpenAcc])
 	err = validateFormattedInt(workStr, ErrOpenAccNotNumber, func(i *int) error {
 		if *i < 2 {
 			return ErrOpenAccTooFew
 		}
-		result["openAcc"] = *workStr
 		return nil
 	})
 	if err != nil {
 		validator.PutMap(result)
 		return nil, err
 	}
+	result["openAcc"] = *workStr
 
 	return result, nil
 }
@@ -271,39 +269,39 @@ func hasNoPublicRecordOrBankruptcies(vCtx *validator.RowValidatorContext, cols [
 		if *i != 0 {
 			return ErrPubRecNotZero
 		}
-		result["pubRec"] = *workStr
 		return nil
 	})
 	if err != nil {
 		validator.PutMap(result)
 		return nil, err
 	}
+	result["pubRec"] = *workStr
 
 	*workStr = utils.TrimIfNeeded(cols[colPubRecBankruptcies])
 	err = validateFormattedInt(workStr, ErrPubRecBankruptciesNotNumber, func(i *int) error {
 		if *i != 0 {
 			return ErrPubRecBankruptciesNotZero
 		}
-		result["pubRecBankruptcies"] = *workStr
 		return nil
 	})
 	if err != nil {
 		validator.PutMap(result)
 		return nil, err
 	}
+	result["pubRecBankruptcies"] = *workStr
 
 	*workStr = utils.TrimIfNeeded(cols[colTaxLiens])
 	err = validateFormattedInt(workStr, ErrTaxLiensNotNumber, func(i *int) error {
 		if *i != 0 {
 			return ErrTaxLiensNotZero
 		}
-		result["taxLiens"] = *workStr
 		return nil
 	})
 	if err != nil {
 		validator.PutMap(result)
 		return nil, err
 	}
+	result["taxLiens"] = *workStr
 
 	return result, nil
 }
