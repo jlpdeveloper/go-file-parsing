@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"context"
 	"fmt"
 	"go-file-parsing/config"
 	"strings"
@@ -228,35 +227,6 @@ func TestValidate_DifferentDelimiter(t *testing.T) {
 			}
 		})
 	}
-}
-
-// MockCacheWithTracking extends MockCache to track calls
-type MockCacheWithTracking struct {
-	MockCache
-	GetCalled      bool
-	SetCalled      bool
-	SetFieldCalled bool
-	GetKey         string
-	SetKey         string
-	SetValue       string
-}
-
-func (m *MockCacheWithTracking) Get(ctx context.Context, key string) (string, error) {
-	m.GetCalled = true
-	m.GetKey = key
-	return "cached-value", nil
-}
-
-func (m *MockCacheWithTracking) Set(ctx context.Context, key, value string) error {
-	m.SetCalled = true
-	m.SetKey = key
-	m.SetValue = value
-	return nil
-}
-
-func (m *MockCacheWithTracking) SetField(ctx context.Context, key, field, value string) error {
-	m.SetFieldCalled = true
-	return nil
 }
 
 func TestValidate_MultipleValidators(t *testing.T) {
