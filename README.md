@@ -57,12 +57,13 @@ The application uses Go's concurrency primitives (goroutines, channels, wait gro
 The limiting factor in this program is the number of available workers for writing to the cache. Below is a table of comparing various pools and 
 times vs memory usage for parsing the full size file. 
 
-| Cache Writers | Error Writers | Row Validators | Time (seconds) | Average per 10,000 rows | Memory Used |
-|---------------|---------------|----------------|----------------|-------------------------|-------------|
-| 10,000        | 10,000        | 1,000          | 8.2            | 34ms                    | 218MiB      |
-| 10,000        | 10,000        | 10             | 11.7           | 48ms                    | 70MiB       |
-| 500           | 500           | 10             | 11.9           | 49ms                    | 57MiB       |
-| 10            | 10            | 10             | 159            | 677ms                   | 39MiB       |
+| Cache Writers | Error Writers | Row Validators | Time (seconds) | Average per 10,000 rows | Memory Used | Notes                  |
+|---------------|---------------|----------------|----------------|-------------------------|-------------|------------------------|
+| 10,000        | 10,000        | 1,000          | 8.2            | 34ms                    | 218MiB      | Others ran from goland |
+| 10,000        | 10,000        | 1,000          | 18.0           | 75ms                    | 81MiB       | In Docker compose      |
+| 10,000        | 10,000        | 10             | 11.7           | 48ms                    | 70MiB       |                        |
+| 500           | 500           | 10             | 11.9           | 49ms                    | 57MiB       |                        |
+| 10            | 10            | 10             | 159            | 677ms                   | 39MiB       |                        | 
 
 ## Dependencies
 
