@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -34,7 +35,7 @@ func NewErrChan(cache cache.DistributedCache, size int, wg *sync.WaitGroup) chan
 	errWorkerPool := make(chan func(validator.RowError), size)
 	for i := 0; i < size; i++ {
 		errWorkerPool <- func(err validator.RowError) {
-			_ = cache.Set(context.Background(), fmt.Sprintf("err:row%s:id%s", err.Row, err.Id), err.Error.Error())
+			_ = cache.Set(context.Background(), fmt.Sprintf("err:row%s:id%s", strconv.FormatInt(err.Row, 10), err.Id), err.Error.Error())
 		}
 	}
 	wg.Add(1)
@@ -69,18 +70,21 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 	chanWg := &sync.WaitGroup{}
 	cacheChan := validator.NewCacheChannel(cacheClient, chanWg)
 	// Create a pool of validators
-	pool := loan_info.NewRowValidatorPool(&conf, cacheChan, 500)
+	pool := loan_info.NewRowValidatorPool(&conf, cacheChan, 1000)
 	// Ensure validators are closed when function exits
 	defer loan_info.CloseValidatorPool(pool)
 
 	// Create a channel to receive errors
-	errChan := NewErrChan(cacheClient, 100, chanWg)
+	errChan := NewErrChan(cacheClient, 200, chanWg)
 	var rowCount int64 = 0
 	scanner := bufio.NewScanner(file)
 	const maxScannerBufferSize = 1024 * 1024 // 1MB buffer
 	buf := make([]byte, maxScannerBufferSize)
 	scanner.Buffer(buf, maxScannerBufferSize)
 	wg := &sync.WaitGroup{}
+
+	times := make([]int, 10)
+	prevTime := time.Now()
 	for scanner.Scan() {
 		currentRow := rowCount
 		if currentRow == 0 && conf.HasHeader {
@@ -110,6 +114,11 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 			fmt.Printf("\tSys = %v MiB", m.Sys/1024/1024)
 			fmt.Printf("\tNumGC = %v\n", m.NumGC)
 
+			now := time.Now()
+			diffMs := now.Sub(prevTime).Milliseconds()
+			times = append(times, int(diffMs))
+			prevTime = now
+
 		}
 		rowCount++
 		if err := scanner.Err(); err != nil {
@@ -123,4 +132,11 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 	close(cacheChan)
 	chanWg.Wait()
 	log.Println("Finished writing to cache.")
+	avgTime := 0
+	for _, t := range times {
+		avgTime += t
+	}
+	avgTime /= len(times)
+	log.Printf("Average time per 10,000 rows: %dms", avgTime)
+	log.Printf("Total rows: %d", rowCount)
 }
