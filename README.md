@@ -48,10 +48,22 @@ go-file-parsing/
    - Allocates a validator from a pool
    - Validates the row concurrently using multiple validation rules
    - Stores valid data in the cache
-   - Collects and reports validation errors
-3. After processing, it cleans up any invalid data from the cache
+   - Collects and stores validation errors in the cache
+3. After processing, reports statistics on the run
 
 The application uses Go's concurrency primitives (goroutines, channels, wait groups, and errgroup) to process rows efficiently.
+
+## Results
+The limiting factor in this program is the number of available workers for writing to the cache. Below is a table of comparing various pools and 
+times vs memory usage for parsing the full size file. 
+
+| Cache Writers | Error Writers | Row Validators | Time (seconds) | Average per 10,000 rows | Memory Used | Notes                  |
+|---------------|---------------|----------------|----------------|-------------------------|-------------|------------------------|
+| 10,000        | 10,000        | 1,000          | 8.2            | 34ms                    | 218MiB      | Others ran from goland |
+| 10,000        | 10,000        | 1,000          | 18.0           | 75ms                    | 81MiB       | In Docker compose      |
+| 10,000        | 10,000        | 10             | 11.7           | 48ms                    | 70MiB       |                        |
+| 500           | 500           | 10             | 11.9           | 49ms                    | 57MiB       |                        |
+| 10            | 10            | 10             | 159            | 677ms                   | 39MiB       |                        | 
 
 ## Dependencies
 
@@ -64,10 +76,37 @@ The application uses Go's concurrency primitives (goroutines, channels, wait gro
 
 ### Prerequisites
 
-- Go 1.24 or later
-- Docker and Docker Compose (for running Valkey)
+- Go 1.24 or later (for local development)
+- Docker and Docker Compose (for running with Docker)
 
-### Steps
+### Option 1: Running with Docker
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/go-file-parsing.git
+   cd go-file-parsing
+   ```
+
+2. Build and run the application with Docker Compose:
+   ```bash
+   docker-compose up -d
+   ```
+
+   This will start both the Valkey container and the application container.
+
+3. To use the sample file instead of the large dataset, modify the `docker-compose.yml` file:
+   ```yaml
+   app:
+     # ... other settings ...
+     command: ["sample.csv"]
+   ```
+
+4. To view logs:
+   ```bash
+   docker-compose logs -f app
+   ```
+
+### Option 2: Running Locally
 
 1. Clone the repository:
    ```bash

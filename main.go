@@ -23,9 +23,19 @@ func main() {
 	}
 	defer cacheClient.Close()
 	start := time.Now()
-	//readWriteValkey(cacheClient)
-	//parseFile("sample.csv", cacheClient)
-	parseFile("data/accepted_2007_to_2018Q4.csv", cacheClient)
+
+	// Default file to parse
+	fileToProcess := "data/accepted_2007_to_2018Q4.csv"
+
+	// Check if a file was specified as a command-line argument
+	if len(os.Args) > 1 {
+		fileToProcess = os.Args[1]
+		log.Printf("Using file specified by command-line argument: %s", fileToProcess)
+	} else {
+		log.Printf("No file specified, using default: %s", fileToProcess)
+	}
+
+	parseFile(fileToProcess, cacheClient)
 	end := time.Now()
 	log.Printf("Time elapsed: %s", end.Sub(start))
 }
@@ -71,14 +81,14 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 		panic(err)
 	}
 	chanWg := &sync.WaitGroup{}
-	cacheChan := validator.NewCacheChannel(cacheClient, chanWg, 500)
+	cacheChan := validator.NewCacheChannel(cacheClient, chanWg, 10000)
 	// Create a pool of validators
 	pool := loan_info.NewRowValidatorPool(&conf, cacheChan, 1000)
 	// Ensure validators are closed when function exits
 	defer loan_info.CloseValidatorPool(pool)
 
 	// Create a channel to receive errors
-	errChan := NewErrChan(cacheClient, 500, chanWg)
+	errChan := NewErrChan(cacheClient, 10000, chanWg)
 	var rowCount int64 = 0
 	scanner := bufio.NewScanner(file)
 	const maxScannerBufferSize = 1024 * 1024 // 1MB buffer
