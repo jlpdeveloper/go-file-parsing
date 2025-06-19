@@ -5,6 +5,7 @@ import (
 	"go-file-parsing/config"
 	"golang.org/x/sync/errgroup"
 	"strings"
+	"sync"
 )
 
 type CsvRowValidator struct {
@@ -27,14 +28,10 @@ func (c *CsvRowValidator) Validate(row string) (string, error) {
 		Config: c.config,
 		GetMap: getMap,
 	}
-
+	mu := sync.Mutex{}
 	m := vCtx.GetMap()
 	m["id"] = id
 	m["raw"] = row
-	c.cacheChan <- CacheData{
-		Id:   id,
-		Data: m,
-	}
 
 	var g errgroup.Group
 
@@ -46,16 +43,29 @@ func (c *CsvRowValidator) Validate(row string) (string, error) {
 				return err
 			}
 			if data != nil {
-				c.cacheChan <- CacheData{
-					Id:   id,
-					Data: data,
+				mu.Lock()
+				for k, v := range data {
+					m[k] = v
 				}
+				PutMap(data)
+				mu.Unlock()
 			}
 			return nil
 		})
 	}
 
-	return id, g.Wait() // returns the first error (if any), cancels other goroutines
+	err := g.Wait()
+	if err != nil {
+		PutMap(m)
+		return id, err
+	}
+
+	c.cacheChan <- CacheData{
+		Id:   id,
+		Data: m,
+	}
+
+	return id, err // returns the first error (if any), cancels other goroutines
 }
 
 // Close closes the validator and releases resources.
