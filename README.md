@@ -64,10 +64,37 @@ The application uses Go's concurrency primitives (goroutines, channels, wait gro
 
 ### Prerequisites
 
-- Go 1.24 or later
-- Docker and Docker Compose (for running Valkey)
+- Go 1.24 or later (for local development)
+- Docker and Docker Compose (for running with Docker)
 
-### Steps
+### Option 1: Running with Docker
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/go-file-parsing.git
+   cd go-file-parsing
+   ```
+
+2. Build and run the application with Docker Compose:
+   ```bash
+   docker-compose up -d
+   ```
+
+   This will start both the Valkey container and the application container.
+
+3. To use the sample file instead of the large dataset, modify the `docker-compose.yml` file:
+   ```yaml
+   app:
+     # ... other settings ...
+     command: ["sample.csv"]
+   ```
+
+4. To view logs:
+   ```bash
+   docker-compose logs -f app
+   ```
+
+### Option 2: Running Locally
 
 1. Clone the repository:
    ```bash
