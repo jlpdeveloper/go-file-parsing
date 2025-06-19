@@ -34,9 +34,8 @@ var (
 
 // Employment info validation errors
 var (
-	ErrEmpTitleEmpty      = errors.New("employment title is empty")
-	ErrEmpLengthEmpty     = errors.New("employment length is empty")
-	ErrEmpLengthNotStable = errors.New("employment length is not stable (5-10+ years)")
+	ErrEmpTitleEmpty  = errors.New("employment title is empty")
+	ErrEmpLengthEmpty = errors.New("employment length is empty")
 )
 
 // DTI and home ownership validation errors
@@ -49,7 +48,6 @@ var (
 // Income validation errors
 var (
 	ErrAnnualIncNotNumber = errors.New("annual income is not a number")
-	ErrAnnualIncTooLow40K = errors.New("annual income is not greater than 40,000")
 	ErrAnnualIncTooLow30K = errors.New("annual income is not greater than 30,000")
 )
 

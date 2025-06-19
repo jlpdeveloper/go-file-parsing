@@ -10,7 +10,10 @@ import (
 	"go-file-parsing/validator"
 	"log"
 	"os"
+	"runtime"
+	"strconv"
 	"sync"
+	"time"
 )
 
 func main() {
@@ -19,24 +22,34 @@ func main() {
 		panic(err)
 	}
 	defer cacheClient.Close()
-
+	start := time.Now()
 	//readWriteValkey(cacheClient)
-	parseFile("sample.csv", cacheClient)
-
+	//parseFile("sample.csv", cacheClient)
+	parseFile("data/accepted_2007_to_2018Q4.csv", cacheClient)
+	end := time.Now()
+	log.Printf("Time elapsed: %s", end.Sub(start))
 }
 
-func readWriteValkey(cacheClient cache.DistributedCache) {
-	ctx := context.Background()
-	err := cacheClient.Set(ctx, "Hello", "World")
-	if err != nil {
-		panic(err)
+func NewErrChan(cache cache.DistributedCache, size int, wg *sync.WaitGroup) chan validator.RowError {
+	errChan := make(chan validator.RowError, size)
+	errWorkerPool := make(chan func(validator.RowError), size)
+	for i := 0; i < size; i++ {
+		errWorkerPool <- func(err validator.RowError) {
+			_ = cache.Set(context.Background(), fmt.Sprintf("err:row%s:id%s", strconv.FormatInt(err.Row, 10), err.Id), err.Error.Error())
+		}
 	}
-	println("Write Done")
-	val, _ := cacheClient.Get(ctx, "Hello")
-
-	println(val)
-	//cacheClient.Do(ctx, cacheClient.B().Hsetnx().Key("test").Field("total").Value("1").Build())
-	//cacheClient.Do(ctx, cacheClient.B().Hincrby().Key("test").Field("total").Increment(10).Build())
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for err := range errChan {
+			worker := <-errWorkerPool
+			go func(e validator.RowError) {
+				worker(e)
+				errWorkerPool <- worker
+			}(err)
+		}
+	}()
+	return errChan
 }
 
 func parseFile(filename string, cacheClient cache.DistributedCache) {
@@ -54,14 +67,24 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 	if err != nil {
 		panic(err)
 	}
-	pool := loan_info.NewRowValidatorPool(&conf, cacheClient, 100)
-	errChan := make(chan validator.RowError, 100)
+	chanWg := &sync.WaitGroup{}
+	cacheChan := validator.NewCacheChannel(cacheClient, chanWg)
+	// Create a pool of validators
+	pool := loan_info.NewRowValidatorPool(&conf, cacheChan, 1000)
+	// Ensure validators are closed when function exits
+	defer loan_info.CloseValidatorPool(pool)
+
+	// Create a channel to receive errors
+	errChan := NewErrChan(cacheClient, 200, chanWg)
 	var rowCount int64 = 0
 	scanner := bufio.NewScanner(file)
 	const maxScannerBufferSize = 1024 * 1024 // 1MB buffer
 	buf := make([]byte, maxScannerBufferSize)
 	scanner.Buffer(buf, maxScannerBufferSize)
 	wg := &sync.WaitGroup{}
+
+	times := make([]int, 10)
+	prevTime := time.Now()
 	for scanner.Scan() {
 		currentRow := rowCount
 		if currentRow == 0 && conf.HasHeader {
@@ -74,7 +97,6 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 			defer wg.Done()
 			id, rowErr := rowVal.Validate(row)
 			if rowErr != nil {
-				log.Println(rowErr.Error())
 				errChan <- validator.RowError{
 					Row:   rowNum,
 					Id:    id,
@@ -83,25 +105,39 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 			}
 			pool <- rowVal
 		}(scanner.Text(), currentRow)
-		rowCount++
-	}
-	var errors []validator.RowError
-	errorWg := &sync.WaitGroup{}
-	errorWg.Add(1)
-	go func() {
-		defer errorWg.Done()
-		for err := range errChan {
-			errors = append(errors, err)
+		if currentRow%10000 == 0 {
+			log.Printf("Processed %d rows\n", currentRow)
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+			fmt.Printf("Alloc = %v MiB", m.Alloc/1024/1024)
+			fmt.Printf("\tTotalAlloc = %v MiB", m.TotalAlloc/1024/1024)
+			fmt.Printf("\tSys = %v MiB", m.Sys/1024/1024)
+			fmt.Printf("\tNumGC = %v\n", m.NumGC)
+
+			now := time.Now()
+			diffMs := now.Sub(prevTime).Milliseconds()
+			times = append(times, int(diffMs))
+			prevTime = now
+
 		}
-	}()
+		rowCount++
+
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("Error scanning file: %v", err)
+	}
+
 	wg.Wait()
 	log.Println("CSV parsing complete.")
 	close(errChan)
-	errorWg.Wait()
-	for _, err := range errors {
-		//Cleanup all the bad data
-		_ = cacheClient.Delete(context.Background(), err.Id)
-		log.Println(fmt.Sprintf("error on line: %d, error: %s", err.Row, err.Error.Error()))
+	close(cacheChan)
+	chanWg.Wait()
+	log.Println("Finished writing to cache.")
+	avgTime := 0
+	for _, t := range times {
+		avgTime += t
 	}
-
+	avgTime /= len(times)
+	log.Printf("Average time per 10,000 rows: %dms", avgTime)
+	log.Printf("Total rows: %d", rowCount)
 }

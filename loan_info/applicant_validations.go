@@ -3,8 +3,6 @@ package loan_info
 import (
 	"go-file-parsing/utils"
 	"go-file-parsing/validator"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -12,19 +10,30 @@ import (
 const (
 	colEmpTitle           = 10
 	colEmpLength          = 11
-	colHomeOwnership      = 12
 	colAnnualInc          = 13
 	colVerificationStatus = 14
-	colDTI                = 36
-	colEarliestCrLine     = 38
-	colFICORangeLow       = 39
-	colFICORangeHigh      = 40
-	colOpenAcc            = 44
-	colPubRec             = 45
-	colTotalAcc           = 48
-	colPubRecBankruptcies = 121
-	colTaxLiens           = 122
+	colDTI                = 24
+	colEarliestCrLine     = 26
+	colFICORangeLow       = 27
+	colFICORangeHigh      = 28
+	colOpenAcc            = 32
+	colPubRec             = 33
+	colTotalAcc           = 36
+	colPubRecBankruptcies = 109
+	colTaxLiens           = 110
 )
+
+var tenYearsAgo = time.Now().AddDate(-10, 0, 0)
+
+func validateFormattedInt(s *string, parseError error, rangeCheck func(int) error) error {
+	var err error
+	i, err := utils.FormattedStringToInt(s)
+	if err != nil {
+		return parseError
+	}
+	return rangeCheck(i)
+
+}
 
 // Rule 5: Has Employment Info
 // Non-empty emp_title and emp_length is not null.
@@ -42,6 +51,11 @@ func hasEmploymentInfo(vCtx *validator.RowValidatorContext, cols []string) (map[
 
 	// Get a map from the pool
 	result := vCtx.GetMap()
+	defer func() {
+		if recover() != nil {
+			validator.PutMap(result)
+		}
+	}()
 	result["empTitle"] = empTitle
 	result["empLength"] = empLength
 
@@ -50,38 +64,31 @@ func hasEmploymentInfo(vCtx *validator.RowValidatorContext, cols []string) (map[
 
 // Rule 6: Low DTI and Home Ownership
 // dti < 20, home_ownership in [MORTGAGE, OWN], and annual_inc > 40,000.
-func hasLowDTIAndHomeOwnership(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
-	dtiStr := utils.TrimIfNeeded(cols[colDTI])
-	homeOwnership := strings.ToUpper(utils.TrimIfNeeded(cols[colHomeOwnership]))
-	annualIncStr := utils.TrimIfNeeded(cols[colAnnualInc])
-
-	dti, err := strconv.ParseFloat(dtiStr, 64)
-	if err != nil {
-		return nil, ErrDTINotNumber
-	}
-
-	if dti >= 20 {
-		return nil, ErrDTITooHigh
-	}
-
-	if homeOwnership != "MORTGAGE" && homeOwnership != "OWN" {
-		return nil, ErrHomeOwnershipInvalid
-	}
-
-	annualInc, err := strconv.ParseFloat(annualIncStr, 64)
-	if err != nil {
-		return nil, ErrAnnualIncNotNumber
-	}
-
-	if annualInc <= 40000 {
-		return nil, ErrAnnualIncTooLow40K
-	}
+func hasLowDTI(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
 
 	// Get a map from the pool
 	result := vCtx.GetMap()
-	result["dti"] = dtiStr
+	var err error
+	dtiStr := utils.TrimIfNeeded(cols[colDTI])
+	err = validateFormattedInt(&dtiStr, ErrDTINotNumber, func(i int) error {
+		if i > 20 {
+			return ErrDTITooHigh
+		}
+		result["dti"] = dtiStr
+		return nil
+	})
+	if err != nil {
+		validator.PutMap(result)
+		return nil, err
+	}
+
+	// Check home ownership
+	homeOwnership := utils.TrimIfNeeded(cols[12])
+	if homeOwnership != "MORTGAGE" && homeOwnership != "OWN" {
+		validator.PutMap(result)
+		return nil, ErrHomeOwnershipInvalid
+	}
 	result["homeOwnership"] = homeOwnership
-	result["annualInc"] = annualIncStr
 
 	return result, nil
 }
@@ -89,27 +96,26 @@ func hasLowDTIAndHomeOwnership(vCtx *validator.RowValidatorContext, cols []strin
 // Rule 7: Established Credit History
 // earliest_cr_line not null and is > 10 years ago.
 func hasEstablishedCreditHistory(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
-	earliestCrLine := utils.TrimIfNeeded(cols[colEarliestCrLine])
+	earliestCRLine := utils.TrimIfNeeded(cols[colEarliestCrLine])
 
-	if earliestCrLine == "" {
+	if earliestCRLine == "" {
 		return nil, ErrEarliestCrLineEmpty
 	}
-
+	result := vCtx.GetMap()
+	var err error
 	// Parse the date in format YYYY-MM
-	crDate, err := time.Parse("2006-01", earliestCrLine)
+	workTime, err := time.Parse("2006-01", earliestCRLine)
 	if err != nil {
+		validator.PutMap(result)
 		return nil, ErrEarliestCrLineFormat
 	}
 
 	// Check if the date is more than 10 years ago
-	tenYearsAgo := time.Now().AddDate(-10, 0, 0)
-	if crDate.After(tenYearsAgo) {
+	if workTime.After(tenYearsAgo) {
+		validator.PutMap(result)
 		return nil, ErrEarliestCrLineTooRecent
 	}
-
-	// Get a map from the pool
-	result := vCtx.GetMap()
-	result["earliestCrLine"] = earliestCrLine
+	result["earliestCrLine"] = earliestCRLine
 
 	return result, nil
 }
@@ -117,130 +123,113 @@ func hasEstablishedCreditHistory(vCtx *validator.RowValidatorContext, cols []str
 // Rule 8: Healthy FICO Score
 // fico_range_low >= 660 and fico_range_high <= 850.
 func hasHealthyFICOScore(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
-	ficoRangeLowStr := utils.TrimIfNeeded(cols[colFICORangeLow])
-	ficoRangeHighStr := utils.TrimIfNeeded(cols[colFICORangeHigh])
-
-	ficoRangeLow, err := strconv.Atoi(ficoRangeLowStr)
-	if err != nil {
-		return nil, ErrFICORangeLowNotNumber
-	}
-
-	ficoRangeHigh, err := strconv.Atoi(ficoRangeHighStr)
-	if err != nil {
-		return nil, ErrFICORangeHighNotNumber
-	}
-
-	if ficoRangeLow < 660 {
-		return nil, ErrFICORangeLowTooLow
-	}
-
-	if ficoRangeHigh > 850 {
-		return nil, ErrFICORangeHighTooHigh
-	}
-
+	var err error
 	// Get a map from the pool
 	result := vCtx.GetMap()
-	result["ficoRangeLow"] = ficoRangeLowStr
-	result["ficoRangeHigh"] = ficoRangeHighStr
+	ficoStr := utils.TrimIfNeeded(cols[colFICORangeLow])
+	err = validateFormattedInt(&ficoStr, ErrFICORangeLowNotNumber, func(i int) error {
+		if i < 660 {
+			return ErrFICORangeLowTooLow
+		}
+		result["ficoRangeLow"] = ficoStr
+		return nil
+	})
+	if err != nil {
+		validator.PutMap(result)
+		return nil, err
+	}
 
+	ficoHighStr := utils.TrimIfNeeded(cols[colFICORangeHigh])
+	err = validateFormattedInt(&ficoHighStr, ErrFICORangeHighNotNumber, func(i int) error {
+		if i > 850 {
+			return ErrFICORangeHighTooHigh
+		}
+		result["ficoRangeHigh"] = ficoHighStr
+		return nil
+	})
+	if err != nil {
+		validator.PutMap(result)
+		return nil, err
+	}
 	return result, nil
 }
 
 // Rule 9: Has Sufficient Accounts
 // total_acc >= 5 and open_acc >= 2.
 func hasSufficientAccounts(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
-	totalAccStr := utils.TrimIfNeeded(cols[colTotalAcc])
-	openAccStr := utils.TrimIfNeeded(cols[colOpenAcc])
-
-	totalAcc, err := strconv.Atoi(totalAccStr)
-	if err != nil {
-		return nil, ErrTotalAccNotNumber
-	}
-
-	openAcc, err := strconv.Atoi(openAccStr)
-	if err != nil {
-		return nil, ErrOpenAccNotNumber
-	}
-
-	if totalAcc < 5 {
-		return nil, ErrTotalAccTooFew
-	}
-
-	if openAcc < 2 {
-		return nil, ErrOpenAccTooFew
-	}
-
-	// Get a map from the pool
 	result := vCtx.GetMap()
-	result["totalAcc"] = totalAccStr
-	result["openAcc"] = openAccStr
-
-	return result, nil
-}
-
-// Rule 10: Stable Employment
-// emp_length in [5 years, 6 years, 7 years, 8 years, 9 years, 10+ years].
-func hasStableEmployment(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
-	empLength := utils.TrimIfNeeded(cols[colEmpLength])
-	validEmpLengths := map[string]bool{
-		"5 years":   true,
-		"6 years":   true,
-		"7 years":   true,
-		"8 years":   true,
-		"9 years":   true,
-		"10+ years": true,
+	var err error
+	totalAcc := utils.TrimIfNeeded(cols[colTotalAcc])
+	err = validateFormattedInt(&totalAcc, ErrTotalAccNotNumber, func(i int) error {
+		if i < 5 {
+			return ErrTotalAccTooFew
+		}
+		result["totalAcc"] = totalAcc
+		return nil
+	})
+	if err != nil {
+		validator.PutMap(result)
+		return nil, err
 	}
 
-	if !validEmpLengths[empLength] {
-		return nil, ErrEmpLengthNotStable
+	openAcc := utils.TrimIfNeeded(cols[colOpenAcc])
+	err = validateFormattedInt(&openAcc, ErrOpenAccNotNumber, func(i int) error {
+		if i < 2 {
+			return ErrOpenAccTooFew
+		}
+		result["openAcc"] = openAcc
+		return nil
+	})
+	if err != nil {
+		validator.PutMap(result)
+		return nil, err
 	}
-
-	// Get a map from the pool
-	result := vCtx.GetMap()
-	result["empLength"] = empLength
-
 	return result, nil
 }
 
 // Rule 11: No Public Record or Bankruptcies
 // pub_rec == 0 and pub_rec_bankruptcies == 0 and tax_liens == 0.
 func hasNoPublicRecordOrBankruptcies(vCtx *validator.RowValidatorContext, cols []string) (map[string]string, error) {
-	pubRecStr := utils.TrimIfNeeded(cols[colPubRec])
-	pubRecBankruptciesStr := utils.TrimIfNeeded(cols[colPubRecBankruptcies])
-	taxLiensStr := utils.TrimIfNeeded(cols[colTaxLiens])
-
-	pubRec, err := strconv.Atoi(pubRecStr)
-	if err != nil {
-		return nil, ErrPubRecNotNumber
-	}
-
-	pubRecBankruptcies, err := strconv.Atoi(pubRecBankruptciesStr)
-	if err != nil {
-		return nil, ErrPubRecBankruptciesNotNumber
-	}
-
-	taxLiens, err := strconv.Atoi(taxLiensStr)
-	if err != nil {
-		return nil, ErrTaxLiensNotNumber
-	}
-
-	if pubRec != 0 {
-		return nil, ErrPubRecNotZero
-	}
-
-	if pubRecBankruptcies != 0 {
-		return nil, ErrPubRecBankruptciesNotZero
-	}
-
-	if taxLiens != 0 {
-		return nil, ErrTaxLiensNotZero
-	}
-
+	var err error
 	// Get a map from the pool
 	result := vCtx.GetMap()
-	result["pubRec"] = pubRecStr
-	result["pubRecBankruptcies"] = pubRecBankruptciesStr
-	result["taxLiens"] = taxLiensStr
+	pubRec := utils.TrimIfNeeded(cols[colPubRec])
+	err = validateFormattedInt(&pubRec, ErrPubRecNotNumber, func(i int) error {
+		if i != 0 {
+			return ErrPubRecNotZero
+		}
+		result["pubRec"] = pubRec
+		return nil
+	})
+	if err != nil {
+		validator.PutMap(result)
+		return nil, err
+	}
+	pubRecBankruptcies := utils.TrimIfNeeded(cols[colPubRecBankruptcies])
+	err = validateFormattedInt(&pubRecBankruptcies, ErrPubRecBankruptciesNotNumber, func(i int) error {
+		if i != 0 {
+			return ErrPubRecBankruptciesNotZero
+		}
+		result["pubRecBankruptcies"] = pubRecBankruptcies
+		return nil
+	})
+	if err != nil {
+		validator.PutMap(result)
+		return nil, err
+	}
+
+	taxLiens := utils.TrimIfNeeded(cols[colTaxLiens])
+	err = validateFormattedInt(&taxLiens, ErrTaxLiensNotNumber, func(i int) error {
+		if i != 0 {
+			return ErrTaxLiensNotZero
+		}
+		result["taxLiens"] = taxLiens
+		return nil
+	})
+	if err != nil {
+		validator.PutMap(result)
+		return nil, err
+	}
 
 	return result, nil
 }
@@ -251,26 +240,24 @@ func isVerifiedWithIncome(vCtx *validator.RowValidatorContext, cols []string) (m
 	verificationStatus := utils.TrimIfNeeded(cols[colVerificationStatus])
 	annualIncStr := utils.TrimIfNeeded(cols[colAnnualInc])
 
-	validVerificationStatuses := map[string]bool{
-		"Source Verified": true,
-		"Verified":        true,
-	}
-
-	if !validVerificationStatuses[verificationStatus] {
+	// Check verification status
+	if verificationStatus != "Source Verified" && verificationStatus != "Verified" {
 		return nil, ErrVerificationStatusInvalid
-	}
-
-	annualInc, err := strconv.ParseFloat(annualIncStr, 64)
-	if err != nil {
-		return nil, ErrAnnualIncNotNumber
-	}
-
-	if annualInc <= 30000 {
-		return nil, ErrAnnualIncTooLow30K
 	}
 
 	// Get a map from the pool
 	result := vCtx.GetMap()
+	err := validateFormattedInt(&annualIncStr, ErrAnnualIncNotNumber, func(i int) error {
+		if i <= 30000 {
+			return ErrAnnualIncTooLow30K
+		}
+		return nil
+	})
+
+	if err != nil {
+		validator.PutMap(result)
+		return nil, err
+	}
 	result["verificationStatus"] = verificationStatus
 	result["annualInc"] = annualIncStr
 
