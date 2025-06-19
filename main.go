@@ -35,7 +35,10 @@ func NewErrChan(cache cache.DistributedCache, size int, wg *sync.WaitGroup) chan
 	errWorkerPool := make(chan func(validator.RowError), size)
 	for i := 0; i < size; i++ {
 		errWorkerPool <- func(err validator.RowError) {
-			_ = cache.Set(context.Background(), fmt.Sprintf("err:row%s:id%s", strconv.FormatInt(err.Row, 10), err.Id), err.Error.Error())
+			cacheErr := cache.Set(context.Background(), fmt.Sprintf("err:row%s:id%s", strconv.FormatInt(err.Row, 10), err.Id), err.Error.Error())
+			if cacheErr != nil {
+				log.Printf("Error writing to cache: %v", cacheErr)
+			}
 		}
 	}
 	wg.Add(1)
@@ -68,14 +71,14 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 		panic(err)
 	}
 	chanWg := &sync.WaitGroup{}
-	cacheChan := validator.NewCacheChannel(cacheClient, chanWg)
+	cacheChan := validator.NewCacheChannel(cacheClient, chanWg, 500)
 	// Create a pool of validators
 	pool := loan_info.NewRowValidatorPool(&conf, cacheChan, 1000)
 	// Ensure validators are closed when function exits
 	defer loan_info.CloseValidatorPool(pool)
 
 	// Create a channel to receive errors
-	errChan := NewErrChan(cacheClient, 200, chanWg)
+	errChan := NewErrChan(cacheClient, 500, chanWg)
 	var rowCount int64 = 0
 	scanner := bufio.NewScanner(file)
 	const maxScannerBufferSize = 1024 * 1024 // 1MB buffer
