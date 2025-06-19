@@ -1,0 +1,20 @@
+services:
+  valkey:
+    image: valkey/valkey
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - valkey
+    environment:
+      - VALKEY_URLS=valkey:6379
+    volumes:
+      - ./data:/app/data
+    # By default, the application will process the large dataset
+    # Uncomment the following line to use the sample file instead
+    # command: ["sample.csv"]
