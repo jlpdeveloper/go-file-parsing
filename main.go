@@ -16,6 +16,12 @@ import (
 	"time"
 )
 
+const (
+	cachePoolSize = 10000
+	errPoolSize   = 10000
+	rowPoolSize   = 1000
+)
+
 func main() {
 	cacheClient, err := cache.New()
 	if err != nil {
@@ -81,14 +87,14 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 		panic(err)
 	}
 	chanWg := &sync.WaitGroup{}
-	cacheChan := validator.NewCacheChannel(cacheClient, chanWg, 10000)
+	cacheChan := validator.NewCacheChannel(cacheClient, chanWg, cachePoolSize)
 	// Create a pool of validators
-	pool := loan_info.NewRowValidatorPool(&conf, cacheChan, 1000)
+	pool := loan_info.NewRowValidatorPool(&conf, cacheChan, rowPoolSize)
 	// Ensure validators are closed when function exits
 	defer loan_info.CloseValidatorPool(pool)
 
 	// Create a channel to receive errors
-	errChan := NewErrChan(cacheClient, 10000, chanWg)
+	errChan := NewErrChan(cacheClient, errPoolSize, chanWg)
 	var rowCount int64 = 0
 	scanner := bufio.NewScanner(file)
 	const maxScannerBufferSize = 1024 * 1024 // 1MB buffer
@@ -153,4 +159,7 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 	avgTime /= len(times)
 	log.Printf("Average time per 10,000 rows: %dms", avgTime)
 	log.Printf("Total rows: %d", rowCount)
+	log.Printf("Cache Pool Size: %d", cachePoolSize)
+	log.Printf("Error Pool Size: %d", errPoolSize)
+	log.Printf("Row Pool Size: %d", rowPoolSize)
 }
