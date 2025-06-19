@@ -48,10 +48,21 @@ go-file-parsing/
    - Allocates a validator from a pool
    - Validates the row concurrently using multiple validation rules
    - Stores valid data in the cache
-   - Collects and reports validation errors
-3. After processing, it cleans up any invalid data from the cache
+   - Collects and stores validation errors in the cache
+3. After processing, reports statistics on the run
 
 The application uses Go's concurrency primitives (goroutines, channels, wait groups, and errgroup) to process rows efficiently.
+
+## Results
+The limiting factor in this program is the number of available workers for writing to the cache. Below is a table of comparing various pools and 
+times vs memory usage for parsing the full size file. 
+
+| Cache Writers | Error Writers | Row Validators | Time (seconds) | Average per 10,000 rows | Memory Used |
+|---------------|---------------|----------------|----------------|-------------------------|-------------|
+| 10,000        | 10,000        | 1,000          | 8.2            | 34ms                    | 218MiB      |
+| 10,000        | 10,000        | 10             | 11.7           | 48ms                    | 70MiB       |
+| 500           | 500           | 10             | 11.9           | 49ms                    | 57MiB       |
+| 10            | 10            | 10             | 159            | 677ms                   | 39MiB       |
 
 ## Dependencies
 
