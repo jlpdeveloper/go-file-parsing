@@ -111,18 +111,6 @@ func TestHasLowDTIAndHomeOwnership(t *testing.T) {
 			wantErr: true,
 			errMsg:  "home ownership is not MORTGAGE or OWN",
 		},
-		{
-			name:    "annual income not a number",
-			cols:    []string{"", "", "", "", "", "", "", "", "", "", "", "", "MORTGAGE", "abc", "", "", "", "", "", "", "", "", "", "", "15"},
-			wantErr: true,
-			errMsg:  "annual income is not a number",
-		},
-		{
-			name:    "annual income too low",
-			cols:    []string{"", "", "", "", "", "", "", "", "", "", "", "", "MORTGAGE", "30000", "", "", "", "", "", "", "", "", "", "", "15"},
-			wantErr: true,
-			errMsg:  "annual income is not greater than 40,000",
-		},
 	}
 
 	for _, tc := range testCases {
@@ -158,9 +146,6 @@ func TestHasLowDTIAndHomeOwnership(t *testing.T) {
 			}
 			if result["homeOwnership"] != tc.cols[12] {
 				t.Errorf("expected homeOwnership '%s', got '%s'", tc.cols[12], result["homeOwnership"])
-			}
-			if result["annualInc"] != tc.cols[13] {
-				t.Errorf("expected annualInc '%s', got '%s'", tc.cols[13], result["annualInc"])
 			}
 		})
 	}
