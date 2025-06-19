@@ -121,9 +121,10 @@ func parseFile(filename string, cacheClient cache.DistributedCache) {
 
 		}
 		rowCount++
-		if err := scanner.Err(); err != nil {
-			log.Fatalf("Error scanning file: %v", err)
-		}
+
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("Error scanning file: %v", err)
 	}
 
 	wg.Wait()
