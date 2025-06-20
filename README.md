@@ -54,17 +54,33 @@ go-file-parsing/
 The application uses Go's concurrency primitives (goroutines, channels, wait groups, and errgroup) to process rows efficiently.
 
 ## Results
-The limiting factor in this program is the number of available workers for writing to the cache. Below is a table of comparing various pools and 
-times vs memory usage for parsing the full size file. 
 
-| Cache Writers | Error Writers | Row Validators | Time (seconds) | Average per 10,000 rows | Memory Used | Notes                  |
-|---------------|---------------|----------------|----------------|-------------------------|-------------|------------------------|
-| 10,000        | 10,000        | 1,000          | 8.2            | 34ms                    | 218MiB      | Others ran from goland |
-| 10,000        | 10,000        | 1,000          | 18.0           | 75ms                    | 81MiB       | In Docker compose      |
-| 10,000        | 10,000        | 10             | 11.7           | 48ms                    | 70MiB       |                        |
-| 500           | 500           | 10             | 11.9           | 49ms                    | 57MiB       |                        |
-| 10            | 10            | 10             | 159            | 677ms                   | 39MiB       |                        | 
+Achieving optimal performance in this highly concurrent workload requires a careful balance between the number 
+of row validators and cache writers. Setting these pool sizes too high or too low directly impacts both throughput 
+and resource utilization. An excess of cache or error writers can reduce processing time, 
+but at the cost of higher memory usage. Too few writers can dramatically slow down the process, 
+even if memory usage is minimized. Similarly, increasing the number of row validators speeds up validation, 
+but if writing can’t keep pace, system resources may be strained without further gains in throughput.
 
+Below is a summary of experiments exploring these tradeoffs. The table is reordered to highlight how adjusting pool sizes affects performance and resources:
+
+| Row Validators | Cache Writers | Error Writers | Time (s) | Avg per 10,000 rows | Memory Used | Notes                  |
+|----------------|--------------|--------------|----------|---------------------|-------------|------------------------|
+| 1,000          | 10,000       | 10,000       | 8.2      | 34ms                | 218MiB      | Others ran from GoLand |
+| 1,000          | 10,000       | 10,000       | 18.0     | 75ms                | 81MiB       | In Docker Compose      |
+| 10             | 10,000       | 10,000       | 11.7     | 48ms                | 70MiB       |                        |
+| 10             | 500          | 500          | 11.9     | 49ms                | 57MiB       |                        |
+| 10             | 10           | 10           | 159      | 677ms               | 39MiB       |                        |
+
+**Interpretation:**
+- **High pool sizes** (validators/writers in the thousands) drastically reduce processing time, but increase memory usage significantly.
+- **Moderate pool sizes** offer reasonable performance with a balance of memory footprint and throughput.
+- **Small pool sizes** minimize memory usage, but at a substantial cost to processing time.
+
+Fine-tuning these parameters is essential: 
+too few writers create a processing backlog, while overly large pools can exhaust memory. 
+The ideal configuration depends on hardware and workload needs, 
+but should always find a balance that maintains high throughput within memory constraints.
 ## Dependencies
 
 - Go 1.24 or later
